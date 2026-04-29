@@ -1,0 +1,33 @@
+---
+import { env } from 'cloudflare:workers';
+
+const error = Astro.url.searchParams.get('error');
+const themeColor = (env.THEME_PRIMARY_COLOR as string | undefined) ?? '#2563eb';
+const clientName = (env.CLIENT_NAME as string | undefined) ?? 'EdgePress';
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Admin login — {clientName}</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style is:global>
+    body { font-family: -apple-system, Segoe UI, sans-serif; background: #f5f5f7; margin: 0; min-height: 100vh; display: grid; place-items: center; color: #1a1a1a; }
+    .card { background: #fff; padding: 2rem; border-radius: 12px; width: min(360px, 90vw); border-top: 4px solid var(--theme); box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
+    h1 { margin: 0 0 1.5rem; font-size: 1.25rem; }
+    label { display: block; font-size: 0.85rem; color: #555; margin-bottom: 0.5rem; }
+    input { width: 100%; padding: 0.6rem 0.8rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
+    button { width: 100%; margin-top: 1rem; padding: 0.7rem; background: var(--theme); color: #fff; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; }
+    .err { color: #c1121f; margin-top: 0.75rem; font-size: 0.85rem; }
+  </style>
+</head>
+<body style={`--theme: ${themeColor}`}>
+  <form class="card" method="POST" action="/api/admin/login">
+    <h1>{clientName} admin</h1>
+    <label for="key">Master admin key</label>
+    <input id="key" name="key" type="password" autocomplete="current-password" required />
+    <button type="submit">Sign in</button>
+    {error && <p class="err">Wrong key. Try again.</p>}
+  </form>
+</body>
+</html>

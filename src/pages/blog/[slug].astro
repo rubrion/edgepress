@@ -1,0 +1,32 @@
+---
+import BlogPost from '../../layouts/BlogPost.astro';
+import { getDbInstance, posts } from '../../db';
+import { and, eq } from 'drizzle-orm';
+
+const { slug } = Astro.params;
+if (!slug) {
+	return new Response('not found', { status: 404 });
+}
+
+const db = getDbInstance();
+const [post] = await db
+	.select()
+	.from(posts)
+	.where(and(eq(posts.slug, slug), eq(posts.isPublished, true)))
+	.limit(1);
+
+if (!post) {
+	return new Response('not found', { status: 404 });
+}
+
+const description = post.contentMd
+	.replace(/^#+\s+.*$/gm, '')
+	.replace(/[#*_`>\[\]()!]/g, '')
+	.replace(/\s+/g, ' ')
+	.trim()
+	.slice(0, 160);
+---
+
+<BlogPost title={post.title} description={description} pubDate={post.publishedAt}>
+	<Fragment set:html={post.contentHtml} />
+</BlogPost>

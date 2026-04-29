@@ -1,0 +1,12 @@
+---
+import { env } from 'cloudflare:workers';
+import Layout from '../layouts/BlogPost.astro';
+
+const clientName = (env.CLIENT_NAME as string | undefined) ?? 'EdgePress';
+---
+
+<Layout title={`About — ${clientName}`} description={`About ${clientName}.`}>
+	<p>
+		{clientName} is a newsletter and blog. Subscribe to receive new posts in your inbox.
+	</p>
+</Layout>

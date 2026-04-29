@@ -1,0 +1,41 @@
+{
+	"name": "edgepress",
+	"type": "module",
+	"version": "0.1.0",
+	"private": true,
+	"engines": {
+		"node": ">=22.12.0"
+	},
+	"scripts": {
+		"dev": "astro dev",
+		"build": "astro build",
+		"preview": "astro build && astro preview",
+		"astro": "astro",
+		"deploy": "astro build && wrangler deploy",
+		"cf-typegen": "wrangler types",
+		"db:generate": "drizzle-kit generate"
+	},
+	"dependencies": {
+		"@astrojs/cloudflare": "^13.2.2",
+		"@astrojs/mdx": "^5.0.4",
+		"@astrojs/react": "^5.0.4",
+		"@astrojs/rss": "^4.0.18",
+		"@astrojs/sitemap": "^3.7.2",
+		"astro": "^6.1.10",
+		"drizzle-orm": "^0.36.4",
+		"marked": "^15.0.7",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0",
+		"sharp": "^0.34.3"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20241112.0",
+		"@types/react": "^19.0.0",
+		"@types/react-dom": "^19.0.0",
+		"drizzle-kit": "^0.28.1",
+		"wrangler": "^4.86.0"
+	},
+	"overrides": {
+		"vite": "^7"
+	}
+}
