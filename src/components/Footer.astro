@@ -1,15 +1,19 @@
 ---
 import { env } from 'cloudflare:workers';
+import { getLang, useTranslations } from '../i18n';
 import SubscribeForm from './SubscribeForm.astro';
 
 const clientName = (env.CLIENT_NAME as string | undefined) ?? 'EdgePress';
 const today = new Date();
+
+const lang = getLang(Astro.request);
+const t = useTranslations(lang);
 ---
 
-<SubscribeForm />
+<SubscribeForm lang={lang} />
 
 <footer>
-	&copy; {today.getFullYear()} {clientName}. All rights reserved.
+	&copy; {today.getFullYear()} {clientName}. {t('footer.rights')}
 </footer>
 <style>
 	footer {

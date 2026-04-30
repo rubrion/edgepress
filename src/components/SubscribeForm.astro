@@ -1,13 +1,37 @@
 ---
-const heading = Astro.props.heading ?? 'Subscribe to the newsletter';
+import { type Lang, useTranslations } from '../i18n';
+
+interface Props {
+  heading?: string;
+  lang?: Lang;
+}
+
+const { lang = 'en' } = Astro.props;
+const t = useTranslations(lang);
+const heading = Astro.props.heading ?? t('subscribe.heading');
 ---
 
 <section class="subscribe">
 	<h3>{heading}</h3>
-	<form class="subscribe-form" method="POST" action="/api/subscribe" data-subscribe>
-		<label class="sr-only" for="subscribe-email">Email</label>
-		<input id="subscribe-email" type="email" name="email" placeholder="you@example.com" autocomplete="email" required />
-		<button type="submit">Subscribe</button>
+	<form
+		class="subscribe-form"
+		method="POST"
+		action="/api/subscribe"
+		data-subscribe
+		data-msg-loading={t('subscribe.loading')}
+		data-msg-success={t('subscribe.success')}
+		data-msg-network={t('subscribe.errorNetwork')}
+	>
+		<label class="sr-only" for="subscribe-email">{t('subscribe.emailLabel')}</label>
+		<input
+			id="subscribe-email"
+			type="email"
+			name="email"
+			placeholder={t('subscribe.placeholder')}
+			autocomplete="email"
+			required
+		/>
+		<button type="submit">{t('subscribe.button')}</button>
 	</form>
 	<p class="subscribe-status" data-subscribe-status></p>
 </section>
@@ -16,9 +40,13 @@ const heading = Astro.props.heading ?? 'Subscribe to the newsletter';
 	const form = document.querySelector<HTMLFormElement>('form[data-subscribe]');
 	const status = document.querySelector<HTMLElement>('[data-subscribe-status]');
 	if (form && status) {
+		const msgLoading = form.dataset.msgLoading ?? 'Subscribing…';
+		const msgSuccess = form.dataset.msgSuccess ?? 'Thanks!';
+		const msgNetwork = form.dataset.msgNetwork ?? 'Network error.';
+
 		form.addEventListener('submit', async (e) => {
 			e.preventDefault();
-			status.textContent = 'Subscribing…';
+			status.textContent = msgLoading;
 			const email = (form.elements.namedItem('email') as HTMLInputElement).value;
 			try {
 				const res = await fetch('/api/subscribe', {
@@ -27,14 +55,14 @@ const heading = Astro.props.heading ?? 'Subscribe to the newsletter';
 					body: JSON.stringify({ email }),
 				});
 				if (res.ok) {
-					status.textContent = 'Thanks! Check your inbox for the next issue.';
+					status.textContent = msgSuccess;
 					form.reset();
 				} else {
 					const j = (await res.json().catch(() => ({}))) as { error?: string };
 					status.textContent = j.error ?? `Failed (${res.status}).`;
 				}
 			} catch (err) {
-				status.textContent = err instanceof Error ? err.message : 'Network error.';
+				status.textContent = err instanceof Error ? err.message : msgNetwork;
 			}
 		});
 	}

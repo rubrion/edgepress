@@ -3,17 +3,20 @@ import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
 import Header from '../components/Header.astro';
+import { getLang, type Lang } from '../i18n';
 
 interface Props {
 	title: string;
 	description: string;
 	pubDate?: Date | null;
+	lang?: Lang;
 }
 
-const { title, description, pubDate } = Astro.props;
+const { title, description, pubDate, lang: langProp } = Astro.props;
+const lang = langProp ?? getLang(Astro.request);
 ---
 
-<html lang="en">
+<html lang={lang}>
 	<head>
 		<BaseHead
 			title={title}
@@ -52,7 +55,7 @@ const { title, description, pubDate } = Astro.props;
 					<div class="title">
 						{pubDate && (
 							<div class="date">
-								<FormattedDate date={pubDate} />
+								<FormattedDate date={pubDate} lang={lang} />
 							</div>
 						)}
 						<h1>{title}</h1>

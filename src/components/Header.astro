@@ -1,9 +1,15 @@
 ---
 import { env } from 'cloudflare:workers';
+import { getLang, useTranslations } from '../i18n';
 import HeaderLink from './HeaderLink.astro';
 
 const clientName = (env.CLIENT_NAME as string | undefined) ?? 'EdgePress';
 const logoUrl = (env.CLIENT_LOGO_URL as string | undefined) || null;
+
+const lang = getLang(Astro.request);
+const t = useTranslations(lang);
+const nextLang = lang === 'en' ? 'pt-BR' : 'en';
+const langLabel = lang === 'en' ? 'PT' : 'EN';
 ---
 
 <header>
@@ -14,30 +20,47 @@ const logoUrl = (env.CLIENT_LOGO_URL as string | undefined) || null;
 			</a>
 		</h2>
 		<div class="internal-links">
-			<HeaderLink href="/">Home</HeaderLink>
-			<HeaderLink href="/blog">Blog</HeaderLink>
-			<HeaderLink href="/about">About</HeaderLink>
+			<HeaderLink href="/">{t('nav.home')}</HeaderLink>
+			<HeaderLink href="/blog">{t('nav.blog')}</HeaderLink>
+			<HeaderLink href="/about">{t('nav.about')}</HeaderLink>
 		</div>
-		<button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
-			<span class="icon-sun">☀</span>
-			<span class="icon-moon">☽</span>
-		</button>
+		<div class="controls">
+			<button id="theme-toggle" class="ctrl-btn" aria-label={t('nav.toggleDark')} title={t('nav.toggleDark')}>
+				<span class="icon-sun">☀</span>
+				<span class="icon-moon">☽</span>
+			</button>
+			<button
+				id="lang-toggle"
+				class="ctrl-btn lang-btn"
+				aria-label={`Switch to ${nextLang}`}
+				data-next-lang={nextLang}
+			>{langLabel}</button>
+		</div>
 	</nav>
 </header>
 
-<script>
-  const btn = document.getElementById('theme-toggle') as HTMLButtonElement;
-  function sync() {
+<script define:vars={{ toDark: t('nav.toDark'), toLight: t('nav.toLight') }}>
+  // Dark mode toggle
+  const themeBtn = document.getElementById('theme-toggle');
+  function syncTheme() {
     const dark = document.documentElement.dataset.theme === 'dark';
-    btn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+    themeBtn.setAttribute('aria-label', dark ? toLight : toDark);
   }
-  btn.addEventListener('click', () => {
+  themeBtn.addEventListener('click', () => {
     const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
     localStorage.setItem('edgepress-theme', next);
-    sync();
+    syncTheme();
   });
-  sync();
+  syncTheme();
+
+  // Language toggle
+  const langBtn = document.getElementById('lang-toggle');
+  langBtn.addEventListener('click', () => {
+    const next = langBtn.dataset.nextLang;
+    document.cookie = `lang=${next}; path=/; max-age=31536000; SameSite=Lax`;
+    window.location.reload();
+  });
 </script>
 
 <style>
@@ -63,7 +86,9 @@ const logoUrl = (env.CLIENT_LOGO_URL as string | undefined) || null;
 		border-bottom-color: var(--accent);
 	}
 
-	.theme-toggle {
+	.controls { display: flex; align-items: center; gap: 0.4rem; }
+
+	.ctrl-btn {
 		background: transparent;
 		border: 1px solid rgb(var(--gray-light));
 		border-radius: 6px;
@@ -74,10 +99,11 @@ const logoUrl = (env.CLIENT_LOGO_URL as string | undefined) || null;
 		color: rgb(var(--gray-dark));
 		display: flex;
 		align-items: center;
-		gap: 0;
 		transition: border-color 0.2s, color 0.2s;
 	}
-	.theme-toggle:hover { border-color: var(--accent); }
+	.ctrl-btn:hover { border-color: var(--accent); }
+
+	.lang-btn { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; padding: 0.35em 0.6em; }
 
 	/* Show sun in dark mode, moon in light mode */
 	:global([data-theme="dark"]) .icon-sun { display: inline; }
