@@ -57,10 +57,11 @@ const sendViaResend = async ({
   html: string;
   recipients: string[];
 }): Promise<{ sent: number; failed: number }> => {
-  const e = env as unknown as { RESEND_API_KEY?: string };
+  const e = env as unknown as { RESEND_API_KEY?: string; EMAIL_FROM_ADDRESS?: string };
   if (!e.RESEND_API_KEY) throw new Error('RESEND_API_KEY not set');
 
-  const from = `${env.CLIENT_NAME} <noreply@${env.CLIENT_DOMAIN}>`;
+  const fromAddress = e.EMAIL_FROM_ADDRESS?.trim() || `noreply@${env.CLIENT_DOMAIN}`;
+  const from = `${env.CLIENT_NAME} <${fromAddress}>`;
 
   const results = await Promise.allSettled(
     recipients.map((to) =>

@@ -44,7 +44,8 @@ const heading = Astro.props.heading ?? 'Subscribe to the newsletter';
 	.subscribe {
 		text-align: center;
 		padding: 2em 1em;
-		background: rgb(var(--gray-light));
+		background: var(--bg-subscribe, rgb(var(--gray-light)));
+		transition: background-color 0.2s;
 	}
 	.subscribe h3 {
 		margin: 0;

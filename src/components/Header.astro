@@ -18,14 +18,35 @@ const logoUrl = (env.CLIENT_LOGO_URL as string | undefined) || null;
 			<HeaderLink href="/blog">Blog</HeaderLink>
 			<HeaderLink href="/about">About</HeaderLink>
 		</div>
+		<button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+			<span class="icon-sun">☀</span>
+			<span class="icon-moon">☽</span>
+		</button>
 	</nav>
 </header>
+
+<script>
+  const btn = document.getElementById('theme-toggle') as HTMLButtonElement;
+  function sync() {
+    const dark = document.documentElement.dataset.theme === 'dark';
+    btn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+  }
+  btn.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('edgepress-theme', next);
+    sync();
+  });
+  sync();
+</script>
+
 <style>
 	header {
 		margin: 0;
 		padding: 0 1em;
-		background: white;
+		background: var(--bg-header, #fff);
 		box-shadow: 0 2px 8px rgba(var(--black), 5%);
+		transition: background-color 0.2s;
 	}
 	h2 { margin: 0; font-size: 1em; }
 	h2 a, h2 a.active { text-decoration: none; }
@@ -41,4 +62,29 @@ const logoUrl = (env.CLIENT_LOGO_URL as string | undefined) || null;
 		text-decoration: none;
 		border-bottom-color: var(--accent);
 	}
+
+	.theme-toggle {
+		background: transparent;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 6px;
+		cursor: pointer;
+		padding: 0.3em 0.55em;
+		font-size: 1rem;
+		line-height: 1;
+		color: rgb(var(--gray-dark));
+		display: flex;
+		align-items: center;
+		gap: 0;
+		transition: border-color 0.2s, color 0.2s;
+	}
+	.theme-toggle:hover { border-color: var(--accent); }
+
+	/* Show sun in dark mode, moon in light mode */
+	:global([data-theme="dark"]) .icon-sun { display: inline; }
+	:global([data-theme="dark"]) .icon-moon { display: none; }
+	:global([data-theme="light"]) .icon-sun { display: none; }
+	:global([data-theme="light"]) .icon-moon { display: inline; }
+	/* Fallback before script runs */
+	.icon-sun { display: none; }
+	.icon-moon { display: inline; }
 </style>

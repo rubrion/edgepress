@@ -3,30 +3,48 @@
  * which BaseHead.astro injects per tenant.
  */
 :root {
-	--theme-primary: #2337ff;
+	--theme-primary: #FF0040;
 	--accent: var(--theme-primary);
-	--accent-dark: #000d8a;
 	--black: 15, 18, 25;
 	--gray: 96, 115, 159;
 	--gray-light: 229, 233, 240;
 	--gray-dark: 34, 41, 57;
 	--gray-gradient: rgba(var(--gray-light), 50%), #fff;
+	--bg-body: #fff;
+	--bg-header: #fff;
+	--bg-subscribe: rgb(var(--gray-light));
 	--box-shadow:
 		0 2px 6px rgba(var(--gray), 25%), 0 8px 24px rgba(var(--gray), 33%),
 		0 16px 32px rgba(var(--gray), 33%);
 }
+
+/* Dark mode — set by pre-paint script + toggle; also matches system preference */
+[data-theme="dark"] {
+	--black: 240, 243, 250;
+	--gray: 130, 145, 175;
+	--gray-light: 38, 43, 60;
+	--gray-dark: 200, 210, 230;
+	--gray-gradient: rgba(var(--gray-light), 60%), #0f1119;
+	--bg-body: #0f1119;
+	--bg-header: #1b1e2d;
+	--bg-subscribe: rgb(var(--gray-light));
+}
+
 body {
 	font-family: var(--font-atkinson);
 	margin: 0;
 	padding: 0;
 	text-align: left;
-	background: linear-gradient(var(--gray-gradient)) no-repeat;
+	background-color: var(--bg-body);
+	background-image: linear-gradient(var(--gray-gradient));
+	background-repeat: no-repeat;
 	background-size: 100% 600px;
 	word-wrap: break-word;
 	overflow-wrap: break-word;
 	color: rgb(var(--gray-dark));
 	font-size: 20px;
 	line-height: 1.7;
+	transition: background-color 0.2s, color 0.2s;
 }
 main {
 	width: 720px;
@@ -53,8 +71,13 @@ textarea { width: 100%; font-size: 16px; }
 input { font-size: 16px; }
 table { width: 100%; }
 img { max-width: 100%; height: auto; border-radius: 8px; }
-code { padding: 2px 5px; background-color: rgb(var(--gray-light)); border-radius: 2px; }
-pre { padding: 1.5em; border-radius: 8px; }
+code {
+	padding: 2px 5px;
+	background-color: rgb(var(--gray-light));
+	color: rgb(var(--gray-dark));
+	border-radius: 2px;
+}
+pre { padding: 1.5em; border-radius: 8px; background-color: rgb(var(--gray-light)); }
 pre > code { all: unset; }
 blockquote {
 	border-left: 4px solid var(--accent);
@@ -63,6 +86,15 @@ blockquote {
 	font-size: 1.333em;
 }
 hr { border: none; border-top: 1px solid rgb(var(--gray-light)); }
+
+/* Brand-colored focus rings instead of browser-default blue */
+:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+/* Colorize native form controls (checkboxes, range, etc.) */
+:root { accent-color: var(--accent); }
+
 @media (max-width: 720px) {
 	body { font-size: 18px; }
 	main { padding: 1em; }
@@ -82,7 +114,8 @@ hr { border: none; border-top: 1px solid rgb(var(--gray-light)); }
 	padding: 0.6rem 0.8rem;
 	border: 1px solid rgb(var(--gray-light));
 	border-radius: 6px;
-	background: #fff;
+	background: var(--bg-body);
+	color: rgb(var(--gray-dark));
 }
 .subscribe-form button {
 	padding: 0.6rem 1.2rem;

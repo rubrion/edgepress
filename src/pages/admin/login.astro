@@ -2,7 +2,7 @@
 import { env } from 'cloudflare:workers';
 
 const error = Astro.url.searchParams.get('error');
-const themeColor = (env.THEME_PRIMARY_COLOR as string | undefined) ?? '#2563eb';
+const themeColor = (env.THEME_PRIMARY_COLOR as string | undefined) ?? '#FF0040';
 const clientName = (env.CLIENT_NAME as string | undefined) ?? 'EdgePress';
 ---
 <!doctype html>

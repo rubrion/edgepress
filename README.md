@@ -105,7 +105,6 @@ bunx wrangler secret put RESEND_API_KEY
 bunx wrangler secret put GMAIL_USER
 bunx wrangler secret put GMAIL_APP_PASSWORD
 ```
-
 ### 6. Regenerate types and deploy
 
 ```sh
@@ -129,6 +128,7 @@ That's it. No second container to host.
 | `CLIENT_FONT` | `vars` | optional | local Atkinson | Google Font family name (e.g. `Inter`, `Playfair Display`). When set at build time, swaps the bundled local font for that Google Font |
 | `THEME_PRIMARY_COLOR` | `vars` | always | `#2563eb` | Accent color, injected as `--theme-primary` |
 | `EMAIL_PROVIDER` | `vars` | always | `RESEND` | `RESEND` or `GMAIL` |
+| `EMAIL_FROM_ADDRESS` | `vars` | optional (`EMAIL_PROVIDER=RESEND`) | `noreply@$CLIENT_DOMAIN` | Resend `From` address (e.g. `news@brand.com`). The domain part must be verified in Resend. Ignored when `EMAIL_PROVIDER=GMAIL` (Gmail forces `From = $GMAIL_USER`). |
 | `DB` | `d1_databases` binding | always | — | Tenant's D1 instance |
 | `MASTER_ADMIN_KEY` | secret | always | — | Login key for `/admin/login`. Stored in an HttpOnly cookie after login |
 | `RESEND_API_KEY` | secret | `EMAIL_PROVIDER=RESEND` | — | Resend API key (`re_...`). Used as `Authorization: Bearer …` to `api.resend.com/emails` |
@@ -187,7 +187,7 @@ Migration is a config-only change — no code edits, no infra moves.
 | Gmail → Resend | 1. `wrangler secret put RESEND_API_KEY`. 2. Update `EMAIL_PROVIDER=RESEND`. 3. `bun run deploy`. |
 
 The `from` address differs between providers:
-- **Resend** uses `noreply@$CLIENT_DOMAIN` (the domain must be verified in Resend).
+- **Resend** uses `$EMAIL_FROM_ADDRESS` if set, otherwise falls back to `noreply@$CLIENT_DOMAIN`. The domain must be verified in Resend either way.
 - **Gmail** uses `$GMAIL_USER` directly (Gmail rejects mismatched senders, so you can't override the address — only the display name).
 
 ---
