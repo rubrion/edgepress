@@ -5,7 +5,10 @@ type WrapArgs = {
   postTitle: string;
   postSlug: string;
   postHtml: string;
+  unsubscribeUrl: string;
 };
+
+export type WrappedEmail = { html: string; text: string };
 
 export const wrapPostInEmail = ({
   clientName,
@@ -14,9 +17,11 @@ export const wrapPostInEmail = ({
   postTitle,
   postSlug,
   postHtml,
-}: WrapArgs): string => {
+  unsubscribeUrl,
+}: WrapArgs): WrappedEmail => {
   const postUrl = `https://${clientDomain}/blog/${postSlug}`;
-  return `<!doctype html>
+
+  const html = `<!doctype html>
 <html><head><meta charset="utf-8"><title>${escapeHtml(postTitle)}</title></head>
 <body style="margin:0;padding:0;background:#f5f5f7;font-family:-apple-system,Segoe UI,sans-serif;color:#1a1a1a;">
   <div style="max-width:640px;margin:0 auto;padding:32px 16px;">
@@ -30,10 +35,42 @@ export const wrapPostInEmail = ({
     </div>
     <p style="text-align:center;margin:24px 0 0;font-size:12px;color:#999;">
       You received this because you subscribed at ${escapeHtml(clientDomain)}.
+      &nbsp;·&nbsp;
+      <a href="${unsubscribeUrl}" style="color:#999;">Unsubscribe</a>
     </p>
   </div>
 </body></html>`;
+
+  const text = [
+    clientName.toUpperCase(),
+    '',
+    postTitle,
+    '─'.repeat(40),
+    stripHtml(postHtml),
+    '',
+    `Read on the web: ${postUrl}`,
+    '',
+    '─'.repeat(40),
+    `You received this because you subscribed at ${clientDomain}.`,
+    `Unsubscribe: ${unsubscribeUrl}`,
+  ].join('\n');
+
+  return { html, text };
 };
 
 const escapeHtml = (s: string): string =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+const stripHtml = (html: string): string =>
+  html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/h[1-6]>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();

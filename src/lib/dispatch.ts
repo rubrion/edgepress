@@ -5,7 +5,7 @@ import { wrapPostInEmail } from './email-template';
 type DispatchArgs = {
   env: Env;
   post: Pick<Post, 'title' | 'slug' | 'contentHtml'>;
-  subscribers: Pick<Subscriber, 'email'>[];
+  subscribers: Pick<Subscriber, 'id' | 'email'>[];
 };
 
 export type DispatchResult = {
@@ -21,25 +21,14 @@ export const dispatchCampaign = async ({
   subscribers,
 }: DispatchArgs): Promise<DispatchResult> => {
   const provider = (env.EMAIL_PROVIDER as string) === 'GMAIL' ? 'GMAIL' : 'RESEND';
-  const recipients = subscribers.map((s) => s.email);
-  if (recipients.length === 0) {
+  if (subscribers.length === 0) {
     return { provider, sent: 0, failed: 0, status: 'sent' };
   }
 
-  const html = wrapPostInEmail({
-    clientName: env.CLIENT_NAME as string,
-    clientDomain: env.CLIENT_DOMAIN as string,
-    themeColor: env.THEME_PRIMARY_COLOR as string,
-    postTitle: post.title,
-    postSlug: post.slug,
-    postHtml: post.contentHtml,
-  });
-  const subject = post.title;
-
   const totals =
     provider === 'RESEND'
-      ? await sendViaResend({ env, subject, html, recipients })
-      : await sendViaGmail({ env, subject, html, recipients });
+      ? await sendViaResend({ env, post, subscribers })
+      : await sendViaGmail({ env, post, subscribers });
 
   const status: DispatchResult['status'] =
     totals.failed === 0 ? 'sent' : totals.sent === 0 ? 'failed' : 'partial';
@@ -48,62 +37,103 @@ export const dispatchCampaign = async ({
 
 const sendViaResend = async ({
   env,
-  subject,
-  html,
-  recipients,
+  post,
+  subscribers,
 }: {
   env: Env;
-  subject: string;
-  html: string;
-  recipients: string[];
+  post: Pick<Post, 'title' | 'slug' | 'contentHtml'>;
+  subscribers: Pick<Subscriber, 'id' | 'email'>[];
 }): Promise<{ sent: number; failed: number }> => {
   const e = env as unknown as { RESEND_API_KEY?: string; EMAIL_FROM_ADDRESS?: string };
   if (!e.RESEND_API_KEY) throw new Error('RESEND_API_KEY not set');
 
   const fromAddress = e.EMAIL_FROM_ADDRESS?.trim() || `noreply@${env.CLIENT_DOMAIN}`;
   const from = `${env.CLIENT_NAME} <${fromAddress}>`;
+  const clientDomain = env.CLIENT_DOMAIN as string;
 
   const results = await Promise.allSettled(
-    recipients.map((to) =>
-      fetch('https://api.resend.com/emails', {
+    subscribers.map(({ id, email }) => {
+      const unsubscribeUrl = `https://${clientDomain}/api/unsubscribe?id=${id}`;
+      const { html, text } = wrapPostInEmail({
+        clientName: env.CLIENT_NAME as string,
+        clientDomain,
+        themeColor: env.THEME_PRIMARY_COLOR as string,
+        postTitle: post.title,
+        postSlug: post.slug,
+        postHtml: post.contentHtml,
+        unsubscribeUrl,
+      });
+
+      return fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${e.RESEND_API_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ from, to, subject, html }),
+        body: JSON.stringify({
+          from,
+          to: email,
+          subject: post.title,
+          html,
+          text,
+          headers: {
+            'List-Unsubscribe': `<${unsubscribeUrl}>`,
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          },
+        }),
       }).then(async (res) => {
         if (!res.ok) throw new Error(`resend ${res.status}: ${await res.text()}`);
-      }),
-    ),
+      });
+    }),
   );
+
   const failed = results.filter((r) => r.status === 'rejected').length;
-  return { sent: recipients.length - failed, failed };
+  return { sent: subscribers.length - failed, failed };
 };
 
 const sendViaGmail = async ({
   env,
-  subject,
-  html,
-  recipients,
+  post,
+  subscribers,
 }: {
   env: Env;
-  subject: string;
-  html: string;
-  recipients: string[];
+  post: Pick<Post, 'title' | 'slug' | 'contentHtml'>;
+  subscribers: Pick<Subscriber, 'id' | 'email'>[];
 }): Promise<{ sent: number; failed: number }> => {
   const e = env as unknown as { GMAIL_USER?: string; GMAIL_APP_PASSWORD?: string };
   if (!e.GMAIL_USER || !e.GMAIL_APP_PASSWORD) {
     throw new Error('GMAIL_USER or GMAIL_APP_PASSWORD not set');
   }
-  const result = await sendBatchGmail({
-    user: e.GMAIL_USER,
-    pass: e.GMAIL_APP_PASSWORD,
-    fromAddress: e.GMAIL_USER,
-    fromName: env.CLIENT_NAME as string,
-    recipients,
-    subject,
-    html,
-  });
-  return { sent: result.sent, failed: result.failed };
+  const clientDomain = env.CLIENT_DOMAIN as string;
+
+  // Gmail: send individually so each recipient gets their own unsubscribe URL
+  let sent = 0;
+  let failed = 0;
+  for (const { id, email } of subscribers) {
+    const unsubscribeUrl = `https://${clientDomain}/api/unsubscribe?id=${id}`;
+    const { html } = wrapPostInEmail({
+      clientName: env.CLIENT_NAME as string,
+      clientDomain,
+      themeColor: env.THEME_PRIMARY_COLOR as string,
+      postTitle: post.title,
+      postSlug: post.slug,
+      postHtml: post.contentHtml,
+      unsubscribeUrl,
+    });
+    try {
+      await sendBatchGmail({
+        user: e.GMAIL_USER,
+        pass: e.GMAIL_APP_PASSWORD,
+        fromAddress: e.GMAIL_USER,
+        fromName: env.CLIENT_NAME as string,
+        recipients: [email],
+        subject: post.title,
+        html,
+      });
+      sent++;
+    } catch {
+      failed++;
+    }
+  }
+  return { sent, failed };
 };

@@ -1,4 +1,4 @@
-# EdgePress — White-label Deployment Guide
+# EdgePress—the high-performance publishing engine
 
 EdgePress is a single Cloudflare Worker (Astro SSR + D1) that runs the public blog, the admin editor, and the newsletter dispatcher. Each white-label tenant gets **one Worker deployment + one D1 database** — nothing else to host.
 
@@ -6,6 +6,19 @@ Email goes out via one of two providers, selected per-tenant:
 
 - **Resend** — HTTP API, called directly from the Worker.
 - **Gmail SMTP** — TCP from the Worker to `smtp.gmail.com:465` via `cloudflare:sockets`. No sidecar container.
+
+
+## See it in Action
+
+Experience EdgePress live: **[edgepress.rubrion.ai](https://edgepress.rubrion.ai/)**
+
+## Work with Us
+
+Want this platform customized and deployed for your business? We offer end-to-end setup, white-label customization, and managed hosting so you can focus on building your brand. Let's get your publishing platform running today!
+
+- **Visit our portal:** [rubrion.ai](https://rubrion.ai)
+- **Email us:** [hello@rubrion.ai](mailto:hello@rubrion.ai)
+- **WhatsApp:** [Chat with Samuel](https://wa.me/5511992562478?text=Ol%C3%A1%20Samuel!%20Tenho%20interesse%20em%20discutir%20uma%20oportunidade%20de%20projeto.)
 
 ---
 
@@ -214,3 +227,9 @@ The `from` address differs between providers:
 | `bun run cf-typegen` | Regenerate `worker-configuration.d.ts` after editing `wrangler.jsonc` |
 | `bunx wrangler tail` | Stream production logs |
 | `bunx wrangler d1 execute edgepress --remote --command "..."` | Run SQL against production D1 |
+
+---
+
+## License
+
+This project is licensed under the [GPLv3 License](LICENSE).

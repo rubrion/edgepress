@@ -111,7 +111,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const activeSubs = await db
-    .select({ email: subscribers.email })
+    .select({ id: subscribers.id, email: subscribers.email })
     .from(subscribers)
     .where(eq(subscribers.status, 'active'));
 
