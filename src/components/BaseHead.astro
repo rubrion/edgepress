@@ -14,8 +14,11 @@ const settings = await loadSettings();
 const clientName = settings.clientName;
 const customFavicon = settings.clientFaviconUrl || null;
 
+// Use html[data-theme="..."] (specificity 0,1,1) instead of :root / [data-theme] (0,1,0)
+// so these win regardless of where Astro injects the bundled global.css <link>.
+// Pre-paint script below sets dataset.theme before first paint, so one of the two always matches.
 const themeCss = `
-:root {
+html[data-theme="light"] {
   --theme-primary: ${settings.themePrimaryColor};
   --bg-body: ${settings.colorBgLight};
   --bg-header: ${settings.colorHeaderBgLight};
@@ -24,7 +27,8 @@ const themeCss = `
   --gray: ${hexToRgbTuple(settings.colorMutedLight)};
   --gray-light: ${hexToRgbTuple(settings.colorBorderLight)};
 }
-[data-theme="dark"] {
+html[data-theme="dark"] {
+  --theme-primary: ${settings.themePrimaryColor};
   --bg-body: ${settings.colorBgDark};
   --bg-header: ${settings.colorHeaderBgDark};
   --black: ${hexToRgbTuple(settings.colorHeadingDark)};
