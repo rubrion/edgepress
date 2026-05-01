@@ -12,17 +12,11 @@
   },
   "routes": [{ "pattern": "edgepress.rubrion.ai", "custom_domain": true }],
   "vars": {
-    "CLIENT_NAME": "Rubrion EdgePress Blog",
     "CLIENT_DOMAIN": "edgepress.rubrion.ai",
-    "CLIENT_TAGLINE": "Code-free, cloud-fee.",
-    "CLIENT_LOGO_URL": "https://media.rubrion.ai/images/logo_rubrion_ver4_white_negativo.png",
-    "CLIENT_FAVICON_URL": "https://rubrion.ai/logo_rubrion_ver4.svg",
-    "CLIENT_FONT": "Fira Sans",
-    "THEME_PRIMARY_COLOR": "#FF0040",
-    "EMAIL_PROVIDER": "RESEND",
-    "EMAIL_FROM_ADDRESS": "newsletter@rubrion.ai",
     "CLIENT_SLUG": "rubrion",
+    "CLIENT_FONT": "Fira Sans",
     "MEDIA_PUBLIC_BASE": "https://media.rubrion.ai",
+    "EMAIL_PROVIDER": "RESEND",
   },
   "r2_buckets": [
     {

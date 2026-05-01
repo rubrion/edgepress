@@ -291,9 +291,10 @@ export default function AdminEditor({ recent, clientName }: Props) {
       <aside style={styles.sidebar}>
         <div style={styles.sidebarHeader}>
           <strong>{clientName}</strong>
-          <button onClick={logout} style={styles.linkBtn}>
-            sign out
-          </button>
+          <div style={styles.sidebarHeaderActions}>
+            <a href="/admin/settings" style={styles.linkBtn}>settings</a>
+            <button onClick={logout} style={styles.linkBtn}>sign out</button>
+          </div>
         </div>
         <button onClick={newPost} style={styles.newBtn}>
           + New post
@@ -445,6 +446,7 @@ const styles: Record<string, React.CSSProperties> = {
   shell: { display: 'grid', gridTemplateColumns: '260px 1fr', height: '100vh' },
   sidebar: { borderRight: '1px solid #e5e5e8', padding: '1rem', display: 'flex', flexDirection: 'column', background: '#fafafb' },
   sidebarHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' },
+  sidebarHeaderActions: { display: 'flex', gap: '0.6rem', alignItems: 'center' },
   newBtn: { padding: '0.6rem', background: 'var(--theme)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', marginBottom: '1rem' },
   list: { display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', flex: 1 },
   listItem: { textAlign: 'left', padding: '0.6rem 0.75rem', background: 'transparent', border: 'none', borderRadius: 6, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '0.2rem' },

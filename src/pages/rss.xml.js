@@ -1,10 +1,11 @@
 import rss from '@astrojs/rss';
-import { env } from 'cloudflare:workers';
 import { desc, eq } from 'drizzle-orm';
 import { getDbInstance, posts } from '../db';
+import { loadSettings } from '../lib/settings';
 
 export async function GET(context) {
-	const clientName = env.CLIENT_NAME ?? 'EdgePress';
+	const settings = await loadSettings();
+	const clientName = settings.clientName;
 	const description = `Latest posts from ${clientName}.`;
 
 	const db = getDbInstance();

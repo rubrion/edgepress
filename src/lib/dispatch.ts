@@ -1,6 +1,7 @@
 import type { Post, Subscriber } from '../db';
 import { sendBatchGmail } from './smtp';
 import { wrapPostInEmail } from './email-template';
+import { loadSettings, type Settings } from './settings';
 
 type DispatchArgs = {
   env: Env;
@@ -25,10 +26,12 @@ export const dispatchCampaign = async ({
     return { provider, sent: 0, failed: 0, status: 'sent' };
   }
 
+  const settings = await loadSettings();
+
   const totals =
     provider === 'RESEND'
-      ? await sendViaResend({ env, post, subscribers })
-      : await sendViaGmail({ env, post, subscribers });
+      ? await sendViaResend({ env, settings, post, subscribers })
+      : await sendViaGmail({ env, settings, post, subscribers });
 
   const status: DispatchResult['status'] =
     totals.failed === 0 ? 'sent' : totals.sent === 0 ? 'failed' : 'partial';
@@ -37,27 +40,29 @@ export const dispatchCampaign = async ({
 
 const sendViaResend = async ({
   env,
+  settings,
   post,
   subscribers,
 }: {
   env: Env;
+  settings: Settings;
   post: Pick<Post, 'title' | 'slug' | 'contentHtml'>;
   subscribers: Pick<Subscriber, 'id' | 'email'>[];
 }): Promise<{ sent: number; failed: number }> => {
-  const e = env as unknown as { RESEND_API_KEY?: string; EMAIL_FROM_ADDRESS?: string };
+  const e = env as unknown as { RESEND_API_KEY?: string };
   if (!e.RESEND_API_KEY) throw new Error('RESEND_API_KEY not set');
 
-  const fromAddress = e.EMAIL_FROM_ADDRESS?.trim() || `noreply@${env.CLIENT_DOMAIN}`;
-  const from = `${env.CLIENT_NAME} <${fromAddress}>`;
+  const fromAddress = settings.emailFromAddress || `noreply@${env.CLIENT_DOMAIN}`;
+  const from = `${settings.clientName} <${fromAddress}>`;
   const clientDomain = env.CLIENT_DOMAIN as string;
 
   const results = await Promise.allSettled(
     subscribers.map(({ id, email }) => {
       const unsubscribeUrl = `https://${clientDomain}/api/unsubscribe?id=${id}`;
       const { html, text } = wrapPostInEmail({
-        clientName: env.CLIENT_NAME as string,
+        clientName: settings.clientName,
         clientDomain,
-        themeColor: env.THEME_PRIMARY_COLOR as string,
+        themeColor: settings.themePrimaryColor,
         postTitle: post.title,
         postSlug: post.slug,
         postHtml: post.contentHtml,
@@ -93,10 +98,12 @@ const sendViaResend = async ({
 
 const sendViaGmail = async ({
   env,
+  settings,
   post,
   subscribers,
 }: {
   env: Env;
+  settings: Settings;
   post: Pick<Post, 'title' | 'slug' | 'contentHtml'>;
   subscribers: Pick<Subscriber, 'id' | 'email'>[];
 }): Promise<{ sent: number; failed: number }> => {
@@ -112,9 +119,9 @@ const sendViaGmail = async ({
   for (const { id, email } of subscribers) {
     const unsubscribeUrl = `https://${clientDomain}/api/unsubscribe?id=${id}`;
     const { html } = wrapPostInEmail({
-      clientName: env.CLIENT_NAME as string,
+      clientName: settings.clientName,
       clientDomain,
-      themeColor: env.THEME_PRIMARY_COLOR as string,
+      themeColor: settings.themePrimaryColor,
       postTitle: post.title,
       postSlug: post.slug,
       postHtml: post.contentHtml,
@@ -125,7 +132,7 @@ const sendViaGmail = async ({
         user: e.GMAIL_USER,
         pass: e.GMAIL_APP_PASSWORD,
         fromAddress: e.GMAIL_USER,
-        fromName: env.CLIENT_NAME as string,
+        fromName: settings.clientName,
         recipients: [email],
         subject: post.title,
         html,

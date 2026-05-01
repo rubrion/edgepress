@@ -1,7 +1,7 @@
 ---
-import { env } from 'cloudflare:workers';
 import '../styles/global.css';
 import { Font } from 'astro:assets';
+import { loadSettings } from '../lib/settings';
 
 interface Props {
 	title: string;
@@ -10,9 +10,10 @@ interface Props {
 	publishedAt?: Date | null;
 }
 
-const clientName = (env.CLIENT_NAME as string | undefined) ?? 'EdgePress';
-const themePrimary = (env.THEME_PRIMARY_COLOR as string | undefined) ?? '#FF0040';
-const customFavicon = (env.CLIENT_FAVICON_URL as string | undefined) || null;
+const settings = await loadSettings();
+const clientName = settings.clientName;
+const themePrimary = settings.themePrimaryColor;
+const customFavicon = settings.clientFaviconUrl || null;
 
 const { title, description, ogType = 'website', publishedAt } = Astro.props;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
@@ -56,9 +57,7 @@ const articleJsonLd =
 
 <Font cssVariable="--font-atkinson" preload />
 
-<style is:inline define:vars={{ themePrimary }}>
-	:root { --theme-primary: var(--themePrimary); }
-</style>
+<style is:inline set:html={`:root { --theme-primary: ${themePrimary}; }`}></style>
 
 <link rel="canonical" href={canonicalURL} />
 

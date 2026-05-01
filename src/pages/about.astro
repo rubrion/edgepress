@@ -1,12 +1,13 @@
 ---
-import { env } from 'cloudflare:workers';
 import Layout from '../layouts/BlogPost.astro';
 import { getLang, useTranslations } from '../i18n';
+import { loadSettings } from '../lib/settings';
 
 const lang = getLang(Astro.request);
 const t = useTranslations(lang);
 
-const clientName = (env.CLIENT_NAME as string | undefined) ?? 'EdgePress';
+const settings = await loadSettings();
+const clientName = settings.clientName;
 ---
 
 <Layout title={`About — ${clientName}`} description={`About ${clientName}.`} lang={lang}>

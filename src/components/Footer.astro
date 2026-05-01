@@ -1,9 +1,10 @@
 ---
-import { env } from 'cloudflare:workers';
 import { getLang, useTranslations } from '../i18n';
+import { loadSettings } from '../lib/settings';
 import SubscribeForm from './SubscribeForm.astro';
 
-const clientName = (env.CLIENT_NAME as string | undefined) ?? 'EdgePress';
+const settings = await loadSettings();
+const clientName = settings.clientName;
 const today = new Date();
 
 const lang = getLang(Astro.request);
