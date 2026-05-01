@@ -23,7 +23,16 @@ function wranglerVar(key) {
 }
 
 const clientDomain = process.env.CLIENT_DOMAIN || wranglerVar('CLIENT_DOMAIN') || 'example.com';
-const clientFont = (process.env.CLIENT_FONT || wranglerVar('CLIENT_FONT')).trim();
+
+// Accept either a bare family name ("Montserrat") or a full CSS stack
+// ("'Montserrat', -apple-system, ..."). The Google provider only wants the family name,
+// so take the first comma-separated token and strip surrounding quotes/whitespace.
+const rawFont = (process.env.CLIENT_FONT || wranglerVar('CLIENT_FONT')).trim();
+const clientFont = rawFont
+  .split(',')[0]
+  .trim()
+  .replace(/^["']|["']$/g, '')
+  .trim();
 
 const fontConfig = clientFont
   ? {
