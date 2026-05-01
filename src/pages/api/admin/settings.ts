@@ -1,15 +1,19 @@
 import type { APIRoute } from 'astro';
-import { type Settings, SETTING_KEYS, saveSettings } from '../../../lib/settings';
+import { COLOR_KEYS, type Settings, SETTING_KEYS, saveSettings } from '../../../lib/settings';
 
 const HEX_COLOR = /^#[0-9a-fA-F]{3,8}$/;
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// RFC 5322-ish local-part: letters, digits, and `._%+-`. No `@`, no spaces.
+const EMAIL_LOCAL = /^[A-Za-z0-9._%+-]+$/;
 
 const validate = (patch: Partial<Settings>): { ok: true } | { ok: false; error: string } => {
-  if (patch.themePrimaryColor && !HEX_COLOR.test(patch.themePrimaryColor)) {
-    return { ok: false, error: 'themePrimaryColor must be a hex like #1a2b3f' };
+  for (const key of COLOR_KEYS) {
+    const v = patch[key];
+    if (v && !HEX_COLOR.test(v)) {
+      return { ok: false, error: `${key} must be a hex color like #1a2b3f` };
+    }
   }
-  if (patch.emailFromAddress && !EMAIL.test(patch.emailFromAddress)) {
-    return { ok: false, error: 'emailFromAddress must be a valid email' };
+  if (patch.emailFromLocal && !EMAIL_LOCAL.test(patch.emailFromLocal)) {
+    return { ok: false, error: 'emailFromLocal must contain only letters, digits, and ._%+- (no @ or spaces)' };
   }
   return { ok: true };
 };

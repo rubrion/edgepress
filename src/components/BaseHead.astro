@@ -1,7 +1,7 @@
 ---
 import '../styles/global.css';
 import { Font } from 'astro:assets';
-import { loadSettings } from '../lib/settings';
+import { hexToRgbTuple, loadSettings } from '../lib/settings';
 
 interface Props {
 	title: string;
@@ -12,8 +12,27 @@ interface Props {
 
 const settings = await loadSettings();
 const clientName = settings.clientName;
-const themePrimary = settings.themePrimaryColor;
 const customFavicon = settings.clientFaviconUrl || null;
+
+const themeCss = `
+:root {
+  --theme-primary: ${settings.themePrimaryColor};
+  --bg-body: ${settings.colorBgLight};
+  --bg-header: ${settings.colorHeaderBgLight};
+  --black: ${hexToRgbTuple(settings.colorHeadingLight)};
+  --gray-dark: ${hexToRgbTuple(settings.colorTextLight)};
+  --gray: ${hexToRgbTuple(settings.colorMutedLight)};
+  --gray-light: ${hexToRgbTuple(settings.colorBorderLight)};
+}
+[data-theme="dark"] {
+  --bg-body: ${settings.colorBgDark};
+  --bg-header: ${settings.colorHeaderBgDark};
+  --black: ${hexToRgbTuple(settings.colorHeadingDark)};
+  --gray-dark: ${hexToRgbTuple(settings.colorTextDark)};
+  --gray: ${hexToRgbTuple(settings.colorMutedDark)};
+  --gray-light: ${hexToRgbTuple(settings.colorBorderDark)};
+}
+`;
 
 const { title, description, ogType = 'website', publishedAt } = Astro.props;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
@@ -57,7 +76,7 @@ const articleJsonLd =
 
 <Font cssVariable="--font-atkinson" preload />
 
-<style is:inline set:html={`:root { --theme-primary: ${themePrimary}; }`}></style>
+<style is:inline set:html={themeCss}></style>
 
 <link rel="canonical" href={canonicalURL} />
 

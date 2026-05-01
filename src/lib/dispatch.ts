@@ -52,9 +52,10 @@ const sendViaResend = async ({
   const e = env as unknown as { RESEND_API_KEY?: string };
   if (!e.RESEND_API_KEY) throw new Error('RESEND_API_KEY not set');
 
-  const fromAddress = settings.emailFromAddress || `noreply@${env.CLIENT_DOMAIN}`;
-  const from = `${settings.clientName} <${fromAddress}>`;
   const clientDomain = env.CLIENT_DOMAIN as string;
+  const local = settings.emailFromLocal.trim() || 'noreply';
+  const fromAddress = `${local}@${clientDomain}`;
+  const from = `${settings.clientName} <${fromAddress}>`;
 
   const results = await Promise.allSettled(
     subscribers.map(({ id, email }) => {

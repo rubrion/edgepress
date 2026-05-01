@@ -1,10 +1,33 @@
 ---
+import { env } from 'cloudflare:workers';
 import { loadSettings } from '../../lib/settings';
 
 const settings = await loadSettings();
 const saved = Astro.url.searchParams.get('saved') === '1';
 const error = Astro.url.searchParams.get('error');
 const themeColor = settings.themePrimaryColor;
+
+const provider = (env as unknown as { EMAIL_PROVIDER?: string }).EMAIL_PROVIDER === 'GMAIL' ? 'GMAIL' : 'RESEND';
+const clientDomain = (env as unknown as { CLIENT_DOMAIN?: string }).CLIENT_DOMAIN ?? '';
+const gmailUser = (env as unknown as { GMAIL_USER?: string }).GMAIL_USER ?? '';
+
+const lightColors = [
+  { key: 'colorBgLight', label: 'Body background' },
+  { key: 'colorHeaderBgLight', label: 'Header background' },
+  { key: 'colorHeadingLight', label: 'Heading text' },
+  { key: 'colorTextLight', label: 'Body text' },
+  { key: 'colorMutedLight', label: 'Muted / secondary text' },
+  { key: 'colorBorderLight', label: 'Borders & code background' },
+] as const;
+
+const darkColors = [
+  { key: 'colorBgDark', label: 'Body background' },
+  { key: 'colorHeaderBgDark', label: 'Header background' },
+  { key: 'colorHeadingDark', label: 'Heading text' },
+  { key: 'colorTextDark', label: 'Body text' },
+  { key: 'colorMutedDark', label: 'Muted / secondary text' },
+  { key: 'colorBorderDark', label: 'Borders & code background' },
+] as const;
 ---
 <!doctype html>
 <html lang="en">
@@ -14,12 +37,14 @@ const themeColor = settings.themePrimaryColor;
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style is:global>
     body { font-family: -apple-system, Segoe UI, sans-serif; background: #f5f5f7; margin: 0; min-height: 100vh; color: #1a1a1a; }
-    .wrap { max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    .wrap { max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
     .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-    .topbar a { color: #555; font-size: 0.85rem; text-decoration: none; }
+    .topbar a { color: #555; font-size: 0.85rem; text-decoration: none; cursor: pointer; }
     .topbar a:hover { color: var(--theme); }
     .card { background: #fff; padding: 2rem; border-radius: 12px; border-top: 4px solid var(--theme); box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
     h1 { margin: 0 0 0.25rem; font-size: 1.4rem; }
+    h2 { margin: 2rem 0 0.75rem; font-size: 1rem; color: #444; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
+    h2:first-of-type { margin-top: 1.5rem; }
     .sub { margin: 0 0 1.5rem; color: #777; font-size: 0.9rem; }
     .field { margin-bottom: 1.1rem; }
     label { display: block; font-size: 0.85rem; color: #555; margin-bottom: 0.4rem; font-weight: 500; }
@@ -27,10 +52,21 @@ const themeColor = settings.themePrimaryColor;
     input[type="text"], input[type="url"], input[type="email"], textarea {
       width: 100%; padding: 0.55rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; box-sizing: border-box; font-family: inherit;
     }
+    input:disabled { background: #f5f5f7; color: #888; cursor: not-allowed; }
     textarea { min-height: 70px; resize: vertical; }
-    input[type="color"] { width: 60px; height: 40px; padding: 0; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; vertical-align: middle; }
+    input[type="color"] { width: 48px; height: 36px; padding: 0; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; vertical-align: middle; }
     .color-row { display: flex; align-items: center; gap: 0.6rem; }
-    .color-row input[type="text"] { flex: 1; }
+    .color-row input[type="text"] { flex: 1; max-width: 140px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; }
+    .color-grid { display: grid; gap: 0.85rem; }
+    .color-grid .field { margin: 0; }
+    .email-row { display: flex; align-items: stretch; }
+    .email-row input[type="text"] { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: none; }
+    .email-row .domain {
+      display: flex; align-items: center; padding: 0 0.75rem;
+      background: #f5f5f7; border: 1px solid #ddd; border-left: none;
+      border-top-right-radius: 6px; border-bottom-right-radius: 6px;
+      color: #555; font-size: 0.9rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
     .actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.5rem; }
     button[type="submit"] { padding: 0.6rem 1.2rem; background: var(--theme); color: #fff; border: none; border-radius: 6px; font-size: 0.95rem; cursor: pointer; font-weight: 500; }
     .alert { padding: 0.6rem 0.8rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; }
@@ -47,12 +83,14 @@ const themeColor = settings.themePrimaryColor;
 
     <div class="card">
       <h1>Site settings</h1>
-      <p class="sub">Brand visuals stored in the database. Empty a field to fall back to the value in <code>wrangler.jsonc</code>.</p>
+      <p class="sub">Brand visuals stored in the database. Empty a field to fall back to the seed value in <code>wrangler.jsonc</code>.</p>
 
       {saved && <div class="alert ok">Saved.</div>}
       {error && <div class="alert err">{error}</div>}
 
       <form method="POST" action="/api/admin/settings">
+        <h2>Brand</h2>
+
         <div class="field">
           <label for="clientName">Brand name</label>
           <input type="text" id="clientName" name="clientName" value={settings.clientName} />
@@ -74,19 +112,74 @@ const themeColor = settings.themePrimaryColor;
           <input type="url" id="clientFaviconUrl" name="clientFaviconUrl" value={settings.clientFaviconUrl} placeholder="https://..." />
         </div>
 
-        <div class="field">
-          <label for="themePrimaryColor">Theme primary color</label>
-          <div class="color-row">
-            <input type="color" id="themePrimaryColorPicker" value={settings.themePrimaryColor} />
-            <input type="text" id="themePrimaryColor" name="themePrimaryColor" value={settings.themePrimaryColor} pattern="^#[0-9a-fA-F]{3,8}$" />
+        <h2>Email</h2>
+
+        {provider === 'GMAIL' ? (
+          <div class="field">
+            <label>Email "from" address</label>
+            <input type="email" value={gmailUser} disabled />
+            <div class="hint">
+              Provider is <strong>GMAIL</strong>. Gmail forces the From address to <code>GMAIL_USER</code>;
+              edit that secret in <code>wrangler.jsonc</code> / Cloudflare to change it.
+            </div>
           </div>
-          <div class="hint">Hex like <code>#1a2b3f</code>.</div>
-        </div>
+        ) : (
+          <div class="field">
+            <label for="emailFromLocal">Email "from" address</label>
+            <div class="email-row">
+              <input
+                type="text"
+                id="emailFromLocal"
+                name="emailFromLocal"
+                value={settings.emailFromLocal}
+                placeholder="noreply"
+                pattern="^[A-Za-z0-9._%+\\-]+$"
+                autocomplete="off"
+              />
+              <span class="domain">@{clientDomain}</span>
+            </div>
+            <div class="hint">
+              Provider is <strong>RESEND</strong>. Only the part before <code>@</code> is editable —
+              the domain is locked to <code>CLIENT_DOMAIN</code> (must be verified in Resend).
+            </div>
+          </div>
+        )}
+
+        <h2>Theme colors — primary</h2>
 
         <div class="field">
-          <label for="emailFromAddress">Email "from" address</label>
-          <input type="email" id="emailFromAddress" name="emailFromAddress" value={settings.emailFromAddress} placeholder="newsletter@yourdomain.com" />
-          <div class="hint">Used as the From address on outgoing newsletters (Resend). Domain must be verified in Resend.</div>
+          <label for="themePrimaryColor">Primary / accent color</label>
+          <div class="color-row">
+            <input type="color" data-picker-for="themePrimaryColor" value={settings.themePrimaryColor} />
+            <input type="text" id="themePrimaryColor" name="themePrimaryColor" value={settings.themePrimaryColor} pattern="^#[0-9a-fA-F]{3,8}$" />
+          </div>
+          <div class="hint">Buttons, links, focus rings, accents.</div>
+        </div>
+
+        <h2>Light mode</h2>
+        <div class="color-grid">
+          {lightColors.map(({ key, label }) => (
+            <div class="field">
+              <label for={key}>{label}</label>
+              <div class="color-row">
+                <input type="color" data-picker-for={key} value={settings[key]} />
+                <input type="text" id={key} name={key} value={settings[key]} pattern="^#[0-9a-fA-F]{3,8}$" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <h2>Dark mode</h2>
+        <div class="color-grid">
+          {darkColors.map(({ key, label }) => (
+            <div class="field">
+              <label for={key}>{label}</label>
+              <div class="color-row">
+                <input type="color" data-picker-for={key} value={settings[key]} />
+                <input type="text" id={key} name={key} value={settings[key]} pattern="^#[0-9a-fA-F]{3,8}$" />
+              </div>
+            </div>
+          ))}
         </div>
 
         <div class="actions">
@@ -97,15 +190,17 @@ const themeColor = settings.themePrimaryColor;
   </div>
 
   <script>
-    // Two-way bind the color picker and the hex text field.
-    const picker = document.getElementById('themePrimaryColorPicker') as HTMLInputElement | null;
-    const text = document.getElementById('themePrimaryColor') as HTMLInputElement | null;
-    if (picker && text) {
+    // Two-way bind every color picker with its sibling hex text input.
+    document.querySelectorAll<HTMLInputElement>('input[type="color"][data-picker-for]').forEach((picker) => {
+      const targetId = picker.dataset.pickerFor;
+      if (!targetId) return;
+      const text = document.getElementById(targetId) as HTMLInputElement | null;
+      if (!text) return;
       picker.addEventListener('input', () => { text.value = picker.value; });
       text.addEventListener('input', () => {
         if (/^#[0-9a-fA-F]{6}$/.test(text.value)) picker.value = text.value;
       });
-    }
+    });
 
     // Logout link via POST (the existing endpoint is POST).
     const logout = document.getElementById('logout-link');
