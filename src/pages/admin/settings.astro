@@ -9,6 +9,7 @@ const themeColor = settings.themePrimaryColor;
 
 const provider = (env as unknown as { EMAIL_PROVIDER?: string }).EMAIL_PROVIDER === 'GMAIL' ? 'GMAIL' : 'RESEND';
 const clientDomain = (env as unknown as { CLIENT_DOMAIN?: string }).CLIENT_DOMAIN ?? '';
+const fromDomain = (env as unknown as { EMAIL_FROM_DOMAIN?: string }).EMAIL_FROM_DOMAIN || clientDomain;
 const gmailUser = (env as unknown as { GMAIL_USER?: string }).GMAIL_USER ?? '';
 
 const lightColors = [
@@ -136,11 +137,12 @@ const darkColors = [
                 pattern="^[A-Za-z0-9._%+\\-]+$"
                 autocomplete="off"
               />
-              <span class="domain">@{clientDomain}</span>
+              <span class="domain">@{fromDomain}</span>
             </div>
             <div class="hint">
               Provider is <strong>RESEND</strong>. Only the part before <code>@</code> is editable —
-              the domain is locked to <code>CLIENT_DOMAIN</code> (must be verified in Resend).
+              the domain comes from <code>EMAIL_FROM_DOMAIN</code> in <code>wrangler.jsonc</code>
+              (must be verified in Resend), independent of <code>CLIENT_DOMAIN</code>.
             </div>
           </div>
         )}

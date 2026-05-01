@@ -17,6 +17,7 @@
     "CLIENT_FONT": "Fira Sans",
     "MEDIA_PUBLIC_BASE": "https://media.rubrion.ai",
     "EMAIL_PROVIDER": "RESEND",
+    "EMAIL_FROM_DOMAIN": "rubrion.ai",
   },
   "r2_buckets": [
     {
