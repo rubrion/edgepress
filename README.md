@@ -55,7 +55,7 @@ Want this platform customized and deployed for your business? We offer end-to-en
 ## Prerequisites
 
 | Tool | Version | Used for |
-|------|---------|----------|
+| ---- | ------- | -------- |
 | [Bun](https://bun.sh) | ≥ 1.3 | Package manager + dev server |
 | Cloudflare account | — | Workers + D1 + R2 |
 | `wrangler` (vendored) | 4.x | Provisioning + deploy (`bunx wrangler ...`) |
@@ -187,7 +187,7 @@ EdgePress splits configuration into three layers, each with a different lifecycl
 ### Admin-managed (D1 `settings` table) — change anytime, no redeploy
 
 | Setting | Purpose | Wrangler seed key |
-|---------|---------|-------------------|
+| ------- | ------- | ----------------- |
 | `clientName` | Brand name shown across UI, OG metadata, RSS, emails | `CLIENT_NAME` |
 | `clientTagline` | Homepage subhead | `CLIENT_TAGLINE` |
 | `clientLogoUrl` | Header logo (when set, replaces the brand text) | `CLIENT_LOGO_URL` |
@@ -200,7 +200,7 @@ Resolution at request time: **DB row → `wrangler.jsonc` seed → hard-coded de
 ### Wrangler `vars` — change requires redeploy
 
 | Var | Required when | Purpose |
-|-----|---------------|---------|
+| --- | ------------- | ------- |
 | `CLIENT_DOMAIN` | always | Canonical URLs, sitemap, default Resend `from` (`noreply@$CLIENT_DOMAIN`), Astro `site` URL |
 | `CLIENT_SLUG` | always (R2 uploads) | Folder name under `edgepress/` in the media bucket. Keeps tenant uploads isolated |
 | `CLIENT_FONT` | optional | Google Font family name (e.g. `Inter`, `Playfair Display`). Read at **build time** |
@@ -212,7 +212,7 @@ Resolution at request time: **DB row → `wrangler.jsonc` seed → hard-coded de
 ### Wrangler bindings — provisioned, named the same across tenants
 
 | Binding | Type | Notes |
-|---------|------|-------|
+| ------- | ---- | ----- |
 | `DB` | D1 | Per-tenant database. Binding name must always be `"DB"` |
 | `MEDIA` | R2 | Bucket for image / video uploads. Bucket name can be shared; isolation is via `CLIENT_SLUG` prefix |
 | `ASSETS` | Static assets | Astro's `dist/` output |
@@ -220,7 +220,7 @@ Resolution at request time: **DB row → `wrangler.jsonc` seed → hard-coded de
 ### Secrets — `wrangler secret put`
 
 | Secret | Required when | Purpose |
-|--------|---------------|---------|
+| ------ | ------------- | ------- |
 | `MASTER_ADMIN_KEY` | always | Login key for `/admin/login`. Stored in an HttpOnly cookie after login |
 | `RESEND_API_KEY` | `EMAIL_PROVIDER=RESEND` | Resend API key (`re_...`) |
 | `GMAIL_USER` | `EMAIL_PROVIDER=GMAIL` | Gmail address. Used as both SMTP login and the `From:` address (Gmail rejects mismatched senders) |
@@ -271,7 +271,7 @@ Then open `/admin/login`, paste your `MASTER_ADMIN_KEY`, configure brand visuals
 Migration is a config-only change — no code edits, no infra moves.
 
 | From → To | Steps |
-|-----------|-------|
+| --------- | ----- |
 | Resend → Gmail | 1. `wrangler secret put GMAIL_USER` and `GMAIL_APP_PASSWORD`. 2. Update `EMAIL_PROVIDER=GMAIL` in `wrangler.jsonc`. 3. `bun run deploy`. |
 | Gmail → Resend | 1. `wrangler secret put RESEND_API_KEY`. 2. Update `EMAIL_PROVIDER=RESEND`. 3. `bun run deploy`. (Also set the From address in `/admin/settings` if you want something other than `noreply@$CLIENT_DOMAIN`.) |
 
@@ -286,7 +286,7 @@ The `from` address differs between providers:
 For Resend, three DNS records on `$CLIENT_DOMAIN` are required for emails to land in inboxes rather than spam folders:
 
 | Record | What it does |
-|--------|-------------|
+| ------ | ------------ |
 | **DKIM** (CNAMEs Resend provides) | Cryptographic proof the email wasn't tampered with |
 | **SPF** (TXT) | Authorises Resend's servers to send on your behalf |
 | **DMARC** (TXT on `_dmarc.$CLIENT_DOMAIN`) | Policy: e.g. `v=DMARC1; p=none; rua=mailto:postmaster@$CLIENT_DOMAIN` |
@@ -312,7 +312,7 @@ EdgePress already sends the headers Gmail's bulk-sender policy requires (`List-U
 ## Useful commands
 
 | Command | What it does |
-|---------|--------------|
+| ------- | ------------ |
 | `bun run dev` | Astro dev server (no CF bindings) |
 | `bunx wrangler dev` | Wrangler dev server (full CF bindings: D1, R2, env vars) |
 | `bun run build` | Server build to `dist/` |

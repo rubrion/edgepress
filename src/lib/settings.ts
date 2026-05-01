@@ -31,7 +31,10 @@ const FALLBACKS: Settings = {
   emailFromAddress: '',
 };
 
-const ENV_KEY: Record<SettingKey, keyof Env> = {
+// Optional seed-fallback env-var name for each setting. These vars may or may
+// not be present in wrangler.jsonc — `Env` only includes those that are, so we
+// look them up by string against an unknown-cast env bag.
+const ENV_KEY: Record<SettingKey, string> = {
   clientName: 'CLIENT_NAME',
   clientTagline: 'CLIENT_TAGLINE',
   clientLogoUrl: 'CLIENT_LOGO_URL',
