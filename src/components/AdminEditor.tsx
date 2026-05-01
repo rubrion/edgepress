@@ -1,5 +1,33 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { marked } from 'marked';
+
+type UploadResult = { url: string; key: string; kind: 'image' | 'video'; size: number };
+
+const ACCEPTED_MIME = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/svg+xml',
+  'video/mp4',
+  'video/webm',
+]);
+
+const uploadMedia = async (file: File): Promise<UploadResult> => {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch('/api/media/upload', {
+    method: 'POST',
+    credentials: 'same-origin',
+    body: fd,
+  });
+  const j = (await res.json().catch(() => ({}))) as { error?: string } & Partial<UploadResult>;
+  if (!res.ok || !j.url) throw new Error(j.error ?? `upload failed (${res.status})`);
+  return j as UploadResult;
+};
+
+const snippetFor = (r: UploadResult): string =>
+  r.kind === 'image' ? `![](${r.url})` : `<video src="${r.url}" controls></video>`;
 
 type RecentPost = {
   id: string;
@@ -57,8 +85,60 @@ export default function AdminEditor({ recent, clientName }: Props) {
   const [posts, setPosts] = useState<RecentPost[]>(recent);
   const [draft, setDraft] = useState<Draft>(blank);
   const [slugDirty, setSlugDirty] = useState(false);
-  const [busy, setBusy] = useState<'idle' | 'saving' | 'publishing' | 'deleting'>('idle');
+  const [busy, setBusy] = useState<'idle' | 'saving' | 'publishing' | 'deleting' | 'uploading'>('idle');
   const [message, setMessage] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const insertAtCursor = (snippet: string) => {
+    const ta = textareaRef.current;
+    setDraft((d) => {
+      const start = ta?.selectionStart ?? d.contentMd.length;
+      const end = ta?.selectionEnd ?? d.contentMd.length;
+      const before = d.contentMd.slice(0, start);
+      const after = d.contentMd.slice(end);
+      // Pad with a newline if we're not on a fresh line, so markdown blocks render cleanly.
+      const sep = before.length === 0 || before.endsWith('\n') ? '' : '\n';
+      const next = `${before}${sep}${snippet}\n${after}`;
+      // Restore caret just after the inserted snippet on the next tick.
+      const caret = before.length + sep.length + snippet.length + 1;
+      queueMicrotask(() => {
+        if (ta) {
+          ta.focus();
+          ta.setSelectionRange(caret, caret);
+        }
+      });
+      return { ...d, contentMd: next };
+    });
+  };
+
+  const handleFiles = async (files: FileList | File[]) => {
+    const list = Array.from(files).filter((f) => ACCEPTED_MIME.has(f.type));
+    if (list.length === 0) {
+      setMessage('No supported files (jpg, png, webp, gif, svg, mp4, webm).');
+      return;
+    }
+    setBusy('uploading');
+    setMessage(`Uploading ${list.length} file${list.length === 1 ? '' : 's'}…`);
+    let okCount = 0;
+    let failMsg: string | null = null;
+    for (const f of list) {
+      try {
+        const r = await uploadMedia(f);
+        insertAtCursor(snippetFor(r));
+        okCount++;
+      } catch (err) {
+        failMsg = err instanceof Error ? err.message : 'upload error';
+      }
+    }
+    setBusy('idle');
+    setMessage(
+      failMsg
+        ? `Uploaded ${okCount}/${list.length}. Last error: ${failMsg}`
+        : `Uploaded ${okCount} file${okCount === 1 ? '' : 's'}.`,
+    );
+  };
 
   useEffect(() => {
     if (!slugDirty) {
@@ -261,12 +341,61 @@ export default function AdminEditor({ recent, clientName }: Props) {
             style={styles.slugInput}
           />
         </div>
+        <div style={styles.toolbar}>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={busy === 'uploading'}
+            style={styles.toolBtn}
+          >
+            {busy === 'uploading' ? 'Uploading…' : '+ Image / video'}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,video/mp4,video/webm"
+            multiple
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                void handleFiles(e.target.files);
+              }
+              e.target.value = '';
+            }}
+          />
+          <span style={styles.toolHint}>drag-drop or paste files into the editor</span>
+        </div>
         <div style={styles.split}>
           <textarea
+            ref={textareaRef}
             placeholder="Write in markdown…"
             value={draft.contentMd}
             onChange={(e) => setDraft((d) => ({ ...d, contentMd: e.target.value }))}
-            style={styles.textarea}
+            onDragOver={(e) => {
+              if (e.dataTransfer?.types?.includes('Files')) {
+                e.preventDefault();
+                setDragOver(true);
+              }
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+                e.preventDefault();
+                setDragOver(false);
+                void handleFiles(e.dataTransfer.files);
+              }
+            }}
+            onPaste={(e) => {
+              const files = e.clipboardData?.files;
+              if (files && files.length > 0) {
+                e.preventDefault();
+                void handleFiles(files);
+              }
+            }}
+            style={{
+              ...styles.textarea,
+              ...(dragOver ? styles.textareaDrop : null),
+            }}
             spellCheck
           />
           <div style={styles.preview} dangerouslySetInnerHTML={{ __html: previewHtml }} />
@@ -328,8 +457,12 @@ const styles: Record<string, React.CSSProperties> = {
   fields: { display: 'flex', gap: '0.5rem', padding: '1rem', borderBottom: '1px solid #e5e5e8', background: '#fff' },
   titleInput: { flex: 1, fontSize: '1.25rem', fontWeight: 600, border: 'none', outline: 'none', padding: '0.5rem' },
   slugInput: { width: 220, fontSize: '0.9rem', color: '#666', border: '1px solid #e5e5e8', borderRadius: 6, padding: '0.5rem 0.75rem' },
+  toolbar: { display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 1rem', borderBottom: '1px solid #e5e5e8', background: '#fff' },
+  toolBtn: { padding: '0.35rem 0.7rem', fontSize: '0.85rem', background: '#fff', color: '#1a1a1a', border: '1px solid #e5e5e8', borderRadius: 6, cursor: 'pointer' },
+  toolHint: { fontSize: '0.75rem', color: '#888' },
   split: { flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', overflow: 'hidden' },
   textarea: { padding: '1rem', border: 'none', borderRight: '1px solid #e5e5e8', outline: 'none', resize: 'none', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: '0.95rem', lineHeight: 1.6 },
+  textareaDrop: { background: '#f0f7ff', boxShadow: 'inset 0 0 0 2px var(--theme)' },
   preview: { padding: '1rem 1.5rem', overflowY: 'auto', background: '#fff', lineHeight: 1.6 },
   actions: { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', borderTop: '1px solid #e5e5e8', background: '#fff' },
   message: { fontSize: '0.85rem', color: '#555' },

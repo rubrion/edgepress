@@ -24,8 +24,16 @@
 		"CLIENT_FONT": "Fira Sans",
 		"THEME_PRIMARY_COLOR": "#FF0040",
 		"EMAIL_PROVIDER": "RESEND",
-		"EMAIL_FROM_ADDRESS": "newsletter@rubrion.ai"
+		"EMAIL_FROM_ADDRESS": "newsletter@rubrion.ai",
+		"CLIENT_SLUG": "rubrion",
+		"MEDIA_PUBLIC_BASE": "https://media.rubrion.ai"
 	},
+	"r2_buckets": [
+		{
+			"binding": "MEDIA",
+			"bucket_name": "rubrion"
+		}
+	],
 	"d1_databases": [
 		{
 			"binding": "DB",

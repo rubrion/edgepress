@@ -8,6 +8,7 @@ const requiresAdmin = (path: string): boolean => {
   if (PUBLIC_ADMIN_PATHS.has(path)) return false;
   if (path === '/admin' || path.startsWith('/admin/')) return true;
   if (path === '/api/publish') return true;
+  if (path === '/api/media/upload') return true;
   if (path.startsWith('/api/posts/')) return true;
   if (path.startsWith('/api/admin/')) return true;
   return false;
