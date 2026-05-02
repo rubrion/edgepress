@@ -109,5 +109,5 @@ export const POST: APIRoute = async ({ request }) => {
       set: { tokensUsed: sql`${aiUsage.tokensUsed} + ${actualTokens}` },
     });
 
-  return json({ contentMd: improved.trim() });
+  return json({ contentMd: improved.trim(), used: usedToday + actualTokens, limit });
 };

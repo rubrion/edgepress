@@ -1,8 +1,9 @@
 ---
+import { env } from 'cloudflare:workers';
 import AdminEditor from '../../components/AdminEditor.tsx';
 import AdminAppbar from '../../components/AdminAppbar.astro';
-import { getDbInstance, campaigns, posts } from '../../db';
-import { desc, inArray } from 'drizzle-orm';
+import { getDbInstance, aiUsage, campaigns, posts } from '../../db';
+import { desc, eq, inArray } from 'drizzle-orm';
 import { loadSettings } from '../../lib/settings';
 
 const db = getDbInstance();
@@ -43,6 +44,22 @@ const settings = await loadSettings();
 const themeColor = settings.themePrimaryColor;
 const clientName = settings.clientName;
 
+const aiLimitRaw = (env as unknown as { AI_REVIEW_DAILY_TOKEN_LIMIT?: string }).AI_REVIEW_DAILY_TOKEN_LIMIT;
+const aiLimit = Number.parseInt(aiLimitRaw ?? '', 10);
+let aiUsedToday = 0;
+if (Number.isFinite(aiLimit) && aiLimit > 0) {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const row = await db.select().from(aiUsage).where(eq(aiUsage.day, today)).limit(1);
+    aiUsedToday = row[0]?.tokensUsed ?? 0;
+  } catch {
+    aiUsedToday = 0;
+  }
+}
+const initialAiUsage = Number.isFinite(aiLimit) && aiLimit > 0
+  ? { used: aiUsedToday, limit: aiLimit }
+  : null;
+
 const recentSerialized = recent.map((p) => ({
   id: p.id,
   title: p.title,
@@ -67,7 +84,7 @@ const recentSerialized = recent.map((p) => ({
 <body style={`--theme: ${themeColor}`}>
   <AdminAppbar current="posts" />
   <div style="flex: 1; min-height: 0;">
-    <AdminEditor client:only="react" recent={recentSerialized} />
+    <AdminEditor client:only="react" recent={recentSerialized} initialAiUsage={initialAiUsage} />
   </div>
 </body>
 </html>

@@ -39,8 +39,11 @@ type RecentPost = {
   lastSentAt: string | null;
 };
 
+type AiUsage = { used: number; limit: number };
+
 type Props = {
   recent: RecentPost[];
+  initialAiUsage: AiUsage | null;
 };
 
 type Draft = {
@@ -80,7 +83,7 @@ const formatSentAt = (iso: string): string => {
   }
 };
 
-export default function AdminEditor({ recent }: Props) {
+export default function AdminEditor({ recent, initialAiUsage }: Props) {
   const [posts, setPosts] = useState<RecentPost[]>(recent);
   const [draft, setDraft] = useState<Draft>(blank);
   const [slugDirty, setSlugDirty] = useState(false);
@@ -89,6 +92,7 @@ export default function AdminEditor({ recent }: Props) {
   const [dragOver, setDragOver] = useState(false);
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
+  const [aiUsage, setAiUsage] = useState<AiUsage | null>(initialAiUsage);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -287,7 +291,15 @@ export default function AdminEditor({ recent }: Props) {
         credentials: 'same-origin',
         body: JSON.stringify({ contentMd: snapshot }),
       });
-      const j = (await res.json().catch(() => ({}))) as { contentMd?: string; error?: string };
+      const j = (await res.json().catch(() => ({}))) as {
+        contentMd?: string;
+        error?: string;
+        used?: number;
+        limit?: number;
+      };
+      if (typeof j.used === 'number' && typeof j.limit === 'number') {
+        setAiUsage({ used: j.used, limit: j.limit });
+      }
       if (!res.ok || !j.contentMd) {
         setUndoStack((s) => s.slice(0, -1));
         setMessage(j.error ?? `AI review failed (${res.status})`);
@@ -469,6 +481,17 @@ export default function AdminEditor({ recent }: Props) {
           <div style={styles.preview} dangerouslySetInnerHTML={{ __html: previewHtml }} />
         </div>
         <div style={styles.actions}>
+          {aiUsage && (
+            <span
+              style={{
+                ...styles.aiUsage,
+                ...(aiUsage.used / aiUsage.limit >= 0.9 ? styles.aiUsageDanger : null),
+              }}
+              title={`${aiUsage.used.toLocaleString()} of ${aiUsage.limit.toLocaleString()} AI review tokens used today`}
+            >
+              ✦ {aiUsage.used.toLocaleString()} / {aiUsage.limit.toLocaleString()} tokens
+            </span>
+          )}
           {message && <span style={styles.message}>{message}</span>}
           {wasSent && draft.lastSentAt && (
             <span style={styles.sentBadge}>✓ Sent {formatSentAt(draft.lastSentAt)}</span>
@@ -534,6 +557,8 @@ const styles: Record<string, React.CSSProperties> = {
   preview: { padding: '1rem 1.5rem', overflowY: 'auto', background: '#fff', lineHeight: 1.6 },
   actions: { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', borderTop: '1px solid #e5e5e8', background: '#fff' },
   message: { fontSize: '0.85rem', color: '#555' },
+  aiUsage: { fontSize: '0.75rem', color: '#5b21b6', background: '#f5f0ff', border: '1px solid #ddd6fe', padding: '0.25rem 0.6rem', borderRadius: 999, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', whiteSpace: 'nowrap' },
+  aiUsageDanger: { color: '#b3261e', background: '#fdecec', border: '1px solid #f5c2c2' },
   sentBadge: { fontSize: '0.8rem', color: '#3a7d44', background: '#eaf6ec', padding: '0.25rem 0.6rem', borderRadius: 999 },
   btnSecondary: { padding: '0.5rem 1rem', background: '#fff', color: '#1a1a1a', border: '1px solid #e5e5e8', borderRadius: 6, cursor: 'pointer' },
   btnDanger: { padding: '0.5rem 1rem', background: '#fff', color: '#c1121f', border: '1px solid #f3c4c4', borderRadius: 6, cursor: 'pointer' },
