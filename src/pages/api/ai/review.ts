@@ -1,13 +1,17 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
+const MAX_INPUT_CHARS = 50_000;
+const MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
 const SYSTEM_PROMPT =
   'You are a professional newsletter editor. Improve the following newsletter post written in Markdown. ' +
   'Keep the same structure, topics, and meaning. Improve clarity, grammar, flow, and reader engagement. ' +
+  'Preserve every image markdown ![alt](url), every <video>/<img>/<a> HTML tag, and every link verbatim — ' +
+  'do not modify their URLs, attributes, alt text, or surrounding positions. ' +
   'Return ONLY the improved Markdown content — no preamble, no explanation, no code fences.';
+
+type AiTextResponse = { response?: string };
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -16,11 +20,6 @@ const json = (body: unknown, status = 200) =>
   });
 
 export const POST: APIRoute = async ({ request }) => {
-  const e = env as unknown as { OPENROUTER_API_KEY?: string };
-  if (!e.OPENROUTER_API_KEY) {
-    return json({ error: 'OPENROUTER_API_KEY is not configured' }, 500);
-  }
-
   let body: unknown;
   try {
     body = await request.json();
@@ -36,44 +35,27 @@ export const POST: APIRoute = async ({ request }) => {
   if (typeof contentMd !== 'string' || !contentMd.trim()) {
     return json({ error: 'contentMd is required' }, 400);
   }
+  if (contentMd.length > MAX_INPUT_CHARS) {
+    return json(
+      { error: `contentMd too large (${contentMd.length} > ${MAX_INPUT_CHARS} chars)` },
+      413,
+    );
+  }
 
-  let res: Response;
+  let result: AiTextResponse;
   try {
-    res = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${e.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: contentMd },
-        ],
-      }),
-    });
+    result = (await env.AI.run(MODEL, {
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: contentMd },
+      ],
+      max_tokens: 8192,
+    })) as AiTextResponse;
   } catch (err) {
-    return json({ error: err instanceof Error ? err.message : 'network error' }, 502);
+    return json({ error: err instanceof Error ? err.message : 'Workers AI error' }, 502);
   }
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    return json({ error: `OpenRouter error ${res.status}: ${text}` }, 502);
-  }
-
-  type OpenRouterResponse = {
-    choices?: Array<{ message?: { content?: string } }>;
-    error?: { message?: string };
-  };
-
-  const data = (await res.json().catch(() => ({}))) as OpenRouterResponse;
-
-  if (data.error) {
-    return json({ error: data.error.message ?? 'model error' }, 502);
-  }
-
-  const improved = data.choices?.[0]?.message?.content;
+  const improved = result?.response;
   if (typeof improved !== 'string' || !improved.trim()) {
     return json({ error: 'empty response from model' }, 502);
   }

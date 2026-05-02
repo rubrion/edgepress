@@ -19,6 +19,9 @@
     "EMAIL_PROVIDER": "RESEND",
     "EMAIL_FROM_DOMAIN": "rubrion.ai",
   },
+  "ai": {
+    "binding": "AI",
+  },
   "r2_buckets": [
     {
       "binding": "MEDIA",

@@ -11,6 +11,7 @@ const requiresAdmin = (path: string): boolean => {
   if (path === '/api/media/upload') return true;
   if (path.startsWith('/api/posts/')) return true;
   if (path.startsWith('/api/admin/')) return true;
+  if (path.startsWith('/api/ai/')) return true;
   return false;
 };
 
