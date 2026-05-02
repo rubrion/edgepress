@@ -18,6 +18,7 @@
     "MEDIA_PUBLIC_BASE": "https://media.rubrion.ai",
     "EMAIL_PROVIDER": "RESEND",
     "EMAIL_FROM_DOMAIN": "rubrion.ai",
+    "AI_REVIEW_DAILY_TOKEN_LIMIT": "8000",
   },
   "ai": {
     "binding": "AI",

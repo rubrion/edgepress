@@ -47,6 +47,11 @@ export const settings = sqliteTable('settings', {
     .$defaultFn(() => new Date()),
 });
 
+export const aiUsage = sqliteTable('ai_usage', {
+  day: text('day').primaryKey(),
+  tokensUsed: integer('tokens_used').notNull().default(0),
+});
+
 export type Subscriber = typeof subscribers.$inferSelect;
 export type NewSubscriber = typeof subscribers.$inferInsert;
 export type Post = typeof posts.$inferSelect;
