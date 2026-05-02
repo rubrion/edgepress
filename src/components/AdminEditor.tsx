@@ -41,7 +41,6 @@ type RecentPost = {
 
 type Props = {
   recent: RecentPost[];
-  clientName: string;
 };
 
 type Draft = {
@@ -81,7 +80,7 @@ const formatSentAt = (iso: string): string => {
   }
 };
 
-export default function AdminEditor({ recent, clientName }: Props) {
+export default function AdminEditor({ recent }: Props) {
   const [posts, setPosts] = useState<RecentPost[]>(recent);
   const [draft, setDraft] = useState<Draft>(blank);
   const [slugDirty, setSlugDirty] = useState(false);
@@ -281,21 +280,9 @@ export default function AdminEditor({ recent, clientName }: Props) {
     }
   };
 
-  const logout = async () => {
-    await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' });
-    window.location.href = '/admin/login';
-  };
-
   return (
     <div style={styles.shell}>
       <aside style={styles.sidebar}>
-        <div style={styles.sidebarHeader}>
-          <strong>{clientName}</strong>
-          <div style={styles.sidebarHeaderActions}>
-            <a href="/admin/settings" style={styles.linkBtn}>settings</a>
-            <button onClick={logout} style={styles.linkBtn}>sign out</button>
-          </div>
-        </div>
         <button onClick={newPost} style={styles.newBtn}>
           + New post
         </button>
@@ -443,19 +430,16 @@ export default function AdminEditor({ recent, clientName }: Props) {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  shell: { display: 'grid', gridTemplateColumns: '260px 1fr', height: '100vh' },
+  shell: { display: 'grid', gridTemplateColumns: '260px 1fr', height: '100%' },
   sidebar: { borderRight: '1px solid #e5e5e8', padding: '1rem', display: 'flex', flexDirection: 'column', background: '#fafafb' },
-  sidebarHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' },
-  sidebarHeaderActions: { display: 'flex', gap: '0.6rem', alignItems: 'center' },
   newBtn: { padding: '0.6rem', background: 'var(--theme)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', marginBottom: '1rem' },
   list: { display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', flex: 1 },
   listItem: { textAlign: 'left', padding: '0.6rem 0.75rem', background: 'transparent', border: 'none', borderRadius: 6, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '0.2rem' },
   listItemActive: { background: '#fff', boxShadow: '0 0 0 1px #e5e5e8' },
   listTitle: { fontSize: '0.9rem', fontWeight: 500 },
   listMeta: { fontSize: '0.75rem', color: '#888' },
-  linkBtn: { background: 'transparent', border: 'none', color: '#888', fontSize: '0.8rem', cursor: 'pointer' },
   muted: { color: '#888', fontSize: '0.85rem' },
-  main: { display: 'flex', flexDirection: 'column', height: '100vh' },
+  main: { display: 'flex', flexDirection: 'column', height: '100%' },
   fields: { display: 'flex', gap: '0.5rem', padding: '1rem', borderBottom: '1px solid #e5e5e8', background: '#fff' },
   titleInput: { flex: 1, fontSize: '1.25rem', fontWeight: 600, border: 'none', outline: 'none', padding: '0.5rem' },
   slugInput: { width: 220, fontSize: '0.9rem', color: '#666', border: '1px solid #e5e5e8', borderRadius: 6, padding: '0.5rem 0.75rem' },

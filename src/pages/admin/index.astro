@@ -1,8 +1,9 @@
 ---
-import { env } from 'cloudflare:workers';
 import AdminEditor from '../../components/AdminEditor.tsx';
+import AdminAppbar from '../../components/AdminAppbar.astro';
 import { getDbInstance, campaigns, posts } from '../../db';
 import { desc, inArray } from 'drizzle-orm';
+import { loadSettings } from '../../lib/settings';
 
 const db = getDbInstance();
 const recent = await db
@@ -38,8 +39,9 @@ if (recent.length > 0) {
   }
 }
 
-const themeColor = (env.THEME_PRIMARY_COLOR as string | undefined) ?? '#FF0040';
-const clientName = (env.CLIENT_NAME as string | undefined) ?? 'EdgePress';
+const settings = await loadSettings();
+const themeColor = settings.themePrimaryColor;
+const clientName = settings.clientName;
 
 const recentSerialized = recent.map((p) => ({
   id: p.id,
@@ -58,10 +60,14 @@ const recentSerialized = recent.map((p) => ({
   <title>Admin — {clientName}</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style is:global>
-    body { font-family: -apple-system, Segoe UI, sans-serif; margin: 0; background: #f5f5f7; color: #1a1a1a; }
+    html, body { height: 100%; }
+    body { font-family: -apple-system, Segoe UI, sans-serif; margin: 0; background: #f5f5f7; color: #1a1a1a; display: flex; flex-direction: column; }
   </style>
 </head>
 <body style={`--theme: ${themeColor}`}>
-  <AdminEditor client:only="react" recent={recentSerialized} clientName={clientName} />
+  <AdminAppbar current="posts" />
+  <div style="flex: 1; min-height: 0;">
+    <AdminEditor client:only="react" recent={recentSerialized} />
+  </div>
 </body>
 </html>
