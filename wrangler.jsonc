@@ -1,7 +1,7 @@
 {
   "compatibility_date": "2026-04-29",
   "compatibility_flags": ["global_fetch_strictly_public"],
-  "name": "web-rubrion-edgepress",
+  "name": "web-tamaseaeconomia-edgepress",
   "main": "@astrojs/cloudflare/entrypoints/server",
   "assets": {
     "directory": "./dist",
@@ -10,11 +10,13 @@
   "observability": {
     "enabled": true,
   },
-  "routes": [{ "pattern": "edgepress.rubrion.ai", "custom_domain": true }],
+  "routes": [
+    { "pattern": "tamaseaeconomia.rubrion.ai", "custom_domain": true },
+  ],
   "vars": {
-    "CLIENT_DOMAIN": "edgepress.rubrion.ai",
-    "CLIENT_SLUG": "rubrion",
-    "CLIENT_FONT": "Fira Sans",
+    "CLIENT_DOMAIN": "tamaseaeconomia.rubrion.ai",
+    "CLIENT_SLUG": "tamaseaeconomia",
+    "CLIENT_FONT": "Montserrat",
     "MEDIA_PUBLIC_BASE": "https://media.rubrion.ai",
     "EMAIL_PROVIDER": "RESEND",
     "EMAIL_FROM_DOMAIN": "rubrion.ai",
@@ -32,8 +34,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "rubrion-edgepress",
-      "database_id": "f2d705ed-73cc-45e6-9e99-2bd735858b90",
+      "database_name": "tamaseaeconomia-edgepress",
+      "database_id": "788866a1-d3d0-4fdc-9a11-3720f07e5bb8",
       "migrations_dir": "./drizzle",
     },
   ],
