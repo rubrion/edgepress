@@ -107,6 +107,20 @@ const darkColors = [
           <input type="url" id="clientFaviconUrl" name="clientFaviconUrl" value={settings.clientFaviconUrl} placeholder="https://..." />
         </div>
 
+        <h2>About page</h2>
+
+        <div class="field">
+          <label for="aboutBodyEn">About body (English)</label>
+          <textarea id="aboutBodyEn" name="aboutBodyEn" rows="4">{settings.aboutBodyEn}</textarea>
+          <div class="hint">Use <code>{'{name}'}</code> as a placeholder for the brand name. HTML allowed. Leave empty to restore the default.</div>
+        </div>
+
+        <div class="field">
+          <label for="aboutBodyPt">About body (Português)</label>
+          <textarea id="aboutBodyPt" name="aboutBodyPt" rows="4">{settings.aboutBodyPt}</textarea>
+          <div class="hint">Use <code>{'{name}'}</code> como espaço reservado para o nome da marca. HTML permitido.</div>
+        </div>
+
         <h2>Email</h2>
 
         {provider === 'GMAIL' ? (

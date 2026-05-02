@@ -25,6 +25,7 @@ const translations = {
     'blog.title': 'Blog',
     'blog.empty': 'No posts yet.',
 
+    'about.title': 'About',
     'about.body': '{name} is a newsletter and blog. Subscribe to receive new posts in your inbox.',
   },
   'pt-BR': {
@@ -51,6 +52,7 @@ const translations = {
     'blog.title': 'Blog',
     'blog.empty': 'Nenhuma publicação ainda.',
 
+    'about.title': 'Sobre',
     'about.body': '{name} é uma newsletter e blog. Assine para receber novas publicações na sua caixa de entrada.',
   },
 } as const;

@@ -8,6 +8,8 @@ export type Settings = {
   clientLogoUrl: string;
   clientFaviconUrl: string;
   emailFromLocal: string;
+  aboutBodyEn: string;
+  aboutBodyPt: string;
   // Light theme colors
   themePrimaryColor: string;
   colorBgLight: string;
@@ -31,6 +33,8 @@ export const SETTING_KEYS = [
   'clientLogoUrl',
   'clientFaviconUrl',
   'emailFromLocal',
+  'aboutBodyEn',
+  'aboutBodyPt',
   'themePrimaryColor',
   'colorBgLight',
   'colorHeaderBgLight',
@@ -72,6 +76,8 @@ const FALLBACKS: Settings = {
   clientLogoUrl: '',
   clientFaviconUrl: '',
   emailFromLocal: 'noreply',
+  aboutBodyEn: '{name} is a newsletter and blog. Subscribe to receive new posts in your inbox.',
+  aboutBodyPt: '{name} é uma newsletter e blog. Assine para receber novas publicações na sua caixa de entrada.',
   themePrimaryColor: '#FF0040',
   // Defaults match the previous hard-coded values in src/styles/global.css.
   colorBgLight: '#FFFFFF',

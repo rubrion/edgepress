@@ -8,8 +8,13 @@ const t = useTranslations(lang);
 
 const settings = await loadSettings();
 const clientName = settings.clientName;
+
+const rawBody = lang === 'pt-BR' ? settings.aboutBodyPt : settings.aboutBodyEn;
+const body = rawBody.replaceAll('{name}', clientName);
+
+const title = t('about.title');
 ---
 
-<Layout title={`About — ${clientName}`} description={`About ${clientName}.`} lang={lang}>
-	<p set:html={t('about.body', { name: clientName })} />
+<Layout title={`${title} — ${clientName}`} description={`${title} ${clientName}.`} lang={lang}>
+	<div set:html={body} />
 </Layout>
