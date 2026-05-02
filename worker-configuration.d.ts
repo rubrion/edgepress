@@ -14,6 +14,7 @@ declare namespace Cloudflare {
 		EMAIL_FROM_DOMAIN: "rubrion.ai";
 		MASTER_ADMIN_KEY: string;
 		RESEND_API_KEY: string;
+		OPENROUTER_API_KEY: string;
 		GMAIL_USER: string;
 		GMAIL_APP_PASSWORD: string;
 	}

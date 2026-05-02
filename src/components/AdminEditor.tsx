@@ -84,9 +84,11 @@ export default function AdminEditor({ recent }: Props) {
   const [posts, setPosts] = useState<RecentPost[]>(recent);
   const [draft, setDraft] = useState<Draft>(blank);
   const [slugDirty, setSlugDirty] = useState(false);
-  const [busy, setBusy] = useState<'idle' | 'saving' | 'publishing' | 'deleting' | 'uploading'>('idle');
+  const [busy, setBusy] = useState<'idle' | 'saving' | 'publishing' | 'deleting' | 'uploading' | 'reviewing'>('idle');
   const [message, setMessage] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [redoStack, setRedoStack] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -252,6 +254,55 @@ export default function AdminEditor({ recent }: Props) {
     }
   };
 
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    const prev = undoStack[undoStack.length - 1];
+    setUndoStack((s) => s.slice(0, -1));
+    setRedoStack((s) => [...s, draft.contentMd]);
+    setDraft((d) => ({ ...d, contentMd: prev }));
+  };
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) return;
+    const next = redoStack[redoStack.length - 1];
+    setRedoStack((s) => s.slice(0, -1));
+    setUndoStack((s) => [...s, draft.contentMd]);
+    setDraft((d) => ({ ...d, contentMd: next }));
+  };
+
+  const handleAiReview = async () => {
+    if (!draft.contentMd.trim()) {
+      setMessage('Nothing to review — write some content first.');
+      return;
+    }
+    const snapshot = draft.contentMd;
+    setBusy('reviewing');
+    setMessage('Reviewing with AI…');
+    setUndoStack((s) => [...s, snapshot]);
+    setRedoStack([]);
+    try {
+      const res = await fetch('/api/ai/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ contentMd: snapshot }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { contentMd?: string; error?: string };
+      if (!res.ok || !j.contentMd) {
+        setUndoStack((s) => s.slice(0, -1));
+        setMessage(j.error ?? `AI review failed (${res.status})`);
+        return;
+      }
+      setDraft((d) => ({ ...d, contentMd: j.contentMd! }));
+      setMessage('Content updated by AI. Use Undo to revert.');
+    } catch (err) {
+      setUndoStack((s) => s.slice(0, -1));
+      setMessage(err instanceof Error ? err.message : 'AI review error');
+    } finally {
+      setBusy('idle');
+    }
+  };
+
   const handleDelete = async () => {
     if (!draft.id) return;
     const ok = window.confirm(
@@ -332,6 +383,25 @@ export default function AdminEditor({ recent }: Props) {
         <div style={styles.toolbar}>
           <button
             type="button"
+            onClick={handleUndo}
+            disabled={busy !== 'idle' || undoStack.length === 0}
+            style={styles.toolBtn}
+            title="Undo AI review"
+          >
+            ↩ Undo
+          </button>
+          <button
+            type="button"
+            onClick={handleRedo}
+            disabled={busy !== 'idle' || redoStack.length === 0}
+            style={styles.toolBtn}
+            title="Redo AI review"
+          >
+            ↪ Redo
+          </button>
+          <span style={styles.toolDivider} />
+          <button
+            type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={busy === 'uploading'}
             style={styles.toolBtn}
@@ -351,6 +421,16 @@ export default function AdminEditor({ recent }: Props) {
               e.target.value = '';
             }}
           />
+          <button
+            type="button"
+            onClick={() => void handleAiReview()}
+            disabled={busy !== 'idle'}
+            style={busy === 'reviewing'
+              ? { ...styles.toolBtn, ...styles.toolBtnAi, opacity: 0.7 }
+              : { ...styles.toolBtn, ...styles.toolBtnAi }}
+          >
+            {busy === 'reviewing' ? 'Reviewing…' : '✦ Review with AI'}
+          </button>
           <span style={styles.toolHint}>drag-drop or paste files into the editor</span>
         </div>
         <div style={styles.split}>
@@ -445,6 +525,8 @@ const styles: Record<string, React.CSSProperties> = {
   slugInput: { width: 220, fontSize: '0.9rem', color: '#666', border: '1px solid #e5e5e8', borderRadius: 6, padding: '0.5rem 0.75rem' },
   toolbar: { display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 1rem', borderBottom: '1px solid #e5e5e8', background: '#fff' },
   toolBtn: { padding: '0.35rem 0.7rem', fontSize: '0.85rem', background: '#fff', color: '#1a1a1a', border: '1px solid #e5e5e8', borderRadius: 6, cursor: 'pointer' },
+  toolBtnAi: { background: '#f5f0ff', color: '#5b21b6', border: '1px solid #ddd6fe' },
+  toolDivider: { display: 'inline-block', width: 1, height: '1.4rem', background: '#e5e5e8', margin: '0 0.25rem' },
   toolHint: { fontSize: '0.75rem', color: '#888' },
   split: { flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', overflow: 'hidden' },
   textarea: { padding: '1rem', border: 'none', borderRight: '1px solid #e5e5e8', outline: 'none', resize: 'none', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: '0.95rem', lineHeight: 1.6 },
