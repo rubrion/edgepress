@@ -124,7 +124,13 @@ const turnstileEnabled =
               <input type="checkbox" id="widgetShowExcerpts" name="widgetShowExcerpts" value="1" checked={settings.widgetShowExcerpts === '1'} />
               Show excerpts
             </label>
+            <label>
+              <input type="hidden" name="widgetHideWatermark" value="0" />
+              <input type="checkbox" id="widgetHideWatermark" name="widgetHideWatermark" value="1" checked={settings.widgetHideWatermark === '1'} />
+              Hide "Powered by Rubrion" watermark
+            </label>
           </div>
+          <div class="hint">Watermark is shown by default. Hiding it is reserved for white-label customers.</div>
         </div>
 
         <h2>Cross-origin embeds (CORS)</h2>

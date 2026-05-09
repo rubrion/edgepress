@@ -32,6 +32,9 @@ const validate = (patch: Partial<Settings>): { ok: true } | { ok: false; error: 
   if (patch.widgetShowExcerpts && !['0', '1'].includes(patch.widgetShowExcerpts)) {
     return { ok: false, error: 'widgetShowExcerpts must be 0 or 1' };
   }
+  if (patch.widgetHideWatermark && !['0', '1'].includes(patch.widgetHideWatermark)) {
+    return { ok: false, error: 'widgetHideWatermark must be 0 or 1' };
+  }
   if (patch.widgetMaxWidth && !CSS_LENGTH.test(patch.widgetMaxWidth)) {
     return { ok: false, error: 'widgetMaxWidth must be a CSS length like 720px or 100%' };
   }

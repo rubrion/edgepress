@@ -49,6 +49,8 @@ Want this platform customized and deployed for your business? We offer end-to-en
 - **Dark / light mode** toggle in the header. Detects `prefers-color-scheme` on first visit, then persists user choice in `localStorage`.
 - **i18n** — `en` and `pt-BR` translations for all public-facing UI. Detects browser `Accept-Language` on first visit, persists choice in a `lang` cookie. Adds `?lang` toggle in the header.
 - **Live brand admin** at `/admin/settings` — change name, tagline, logo, favicon, accent color, email From-address without a deploy.
+- **Embeddable blog widget** at `/embed/blog` (and `/embed/blog/<slug>`) — themeable iframe with auto-resize, drop-in subscribe form, double opt-in, optional Cloudflare Turnstile, and a configurable origin allowlist. Configure defaults and copy the snippet from `/admin/widget`.
+- **"Powered by Rubrion" watermark** on every embedded widget by default (small pill with link to [rubrion.ai](https://rubrion.ai)). Toggle off in `/admin/widget` for paid white-label deployments.
 
 ---
 
@@ -194,6 +196,13 @@ EdgePress splits configuration into three layers, each with a different lifecycl
 | `clientFaviconUrl` | Custom favicon | `CLIENT_FAVICON_URL` |
 | `themePrimaryColor` | Accent color, injected as `--theme-primary` | `THEME_PRIMARY_COLOR` |
 | `emailFromAddress` | Resend `From` address (e.g. `news@brand.com`). Domain must be verified in Resend. Ignored when `EMAIL_PROVIDER=GMAIL`. | `EMAIL_FROM_ADDRESS` |
+| `widgetDefaultTheme` | Default theme for `/embed/blog` (`auto` / `light` / `dark`) | — |
+| `widgetDefaultLimit` | Default number of posts in the widget (1–50) | — |
+| `widgetShowDate` / `widgetShowExcerpts` | Toggle date and excerpt rendering in the widget | — |
+| `widgetMaxWidth` | Optional CSS max-width for widget content (e.g. `720px`) | — |
+| `widgetAccentOverride` | Hex color overriding `themePrimaryColor` inside the widget only | — |
+| `widgetAllowedOrigins` | Comma-separated origins (or `*`) allowed to call `/api/subscribe` and `/api/unsubscribe` cross-origin | — |
+| `widgetHideWatermark` | `1` removes the "Powered by Rubrion" pill from the widget. **Default `0` (visible).** Reserved for white-label customers — server-side only, not overridable via query string. | — |
 
 Resolution at request time: **DB row → `wrangler.jsonc` seed → hard-coded default**. Saving an empty value in admin removes the override and falls back to the seed.
 

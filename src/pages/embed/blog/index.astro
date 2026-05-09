@@ -32,6 +32,10 @@ const linkBase =
   q.get('linkBase') ||
   (target === '_self' ? `${Astro.url.origin}/embed/blog` : `${Astro.url.origin}/blog`);
 
+// Admin-only flag (D1 setting). Intentionally NOT readable from query string —
+// otherwise tenants could strip the watermark by editing their iframe `src`.
+const showWatermark = settings.widgetHideWatermark !== '1';
+
 const db = getDbInstance();
 const rows = await db
   .select({
@@ -135,6 +139,17 @@ const dataTheme = themeMode === 'auto' ? null : themeMode;
       .excerpt { color: rgb(var(--muted)); font-size: 0.9em; margin-top: 0.25rem; }
       html[data-theme="dark"] .excerpt { color: rgb(var(--mutedDark)); }
       .empty { color: rgb(var(--muted)); padding: 1rem 0; }
+      .ep-wm {
+        display: inline-flex; align-items: center; gap: 6px;
+        margin: 1.25rem auto 0.25rem; padding: 4px 10px;
+        background: rgba(15,17,25,0.78); color: #fff;
+        border-radius: 999px; font-size: 11px; line-height: 1;
+        text-decoration: none; opacity: 0.7; transition: opacity .15s;
+        width: fit-content;
+      }
+      .ep-wm:hover { opacity: 1; }
+      .ep-wm img { display: block; }
+      .ep-wm-row { display: flex; justify-content: center; }
     </style>
   </head>
   <body>
@@ -157,6 +172,17 @@ const dataTheme = themeMode === 'auto' ? null : themeMode;
             </li>
           ))}
         </ul>
+      )}
+      {showWatermark && (
+        <div class="ep-wm-row">
+          <a class="ep-wm" href="https://rubrion.ai/?utm_source=edgepress-widget"
+             target="_blank" rel="noopener nofollow"
+             aria-label="Powered by Rubrion">
+            <img src="https://media.rubrion.ai/images/logo_rubrion_ver4_white.svg"
+                 alt="Rubrion" width="14" height="14" loading="lazy" />
+            <span>Powered by Rubrion</span>
+          </a>
+        </div>
       )}
     </div>
 

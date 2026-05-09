@@ -33,6 +33,7 @@ export type Settings = {
   widgetMaxWidth: string;            // CSS length, e.g. '720px' or ''
   widgetAccentOverride: string;      // hex or ''
   widgetAllowedOrigins: string;      // comma-separated origins or '*' (informational; CSP allows all parents)
+  widgetHideWatermark: string;       // '0' show "Powered by Rubrion" pill (default), '1' hide (white-label)
 };
 
 export const SETTING_KEYS = [
@@ -63,6 +64,7 @@ export const SETTING_KEYS = [
   'widgetMaxWidth',
   'widgetAccentOverride',
   'widgetAllowedOrigins',
+  'widgetHideWatermark',
 ] as const satisfies readonly (keyof Settings)[];
 
 export type SettingKey = (typeof SETTING_KEYS)[number];
@@ -114,6 +116,7 @@ const FALLBACKS: Settings = {
   widgetMaxWidth: '',
   widgetAccentOverride: '',
   widgetAllowedOrigins: '*',
+  widgetHideWatermark: '0',
 };
 
 // Optional seed-fallback env-var name for each setting. Vars may or may not be

@@ -30,6 +30,7 @@ const accent = q.get('accent') || settings.widgetAccentOverride || settings.them
 const fontInherit = q.get('font') === 'inherit';
 const showBackLink = q.get('back') !== '0';
 const backHref = `${Astro.url.origin}/embed/blog${Astro.url.search}`;
+const showWatermark = settings.widgetHideWatermark !== '1';
 
 const fontStack = fontInherit ? 'inherit' : 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
@@ -94,6 +95,17 @@ const dataTheme = themeMode === 'auto' ? null : themeMode;
       .content code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
       .content blockquote { border-left: 3px solid rgb(var(--border)); margin: 1em 0; padding: 0 0 0 1em; color: rgb(var(--muted)); }
       html[data-theme="dark"] .content blockquote { border-left-color: rgb(var(--borderDark)); color: rgb(var(--mutedDark)); }
+      .ep-wm {
+        display: inline-flex; align-items: center; gap: 6px;
+        margin: 2rem auto 0.25rem; padding: 4px 10px;
+        background: rgba(15,17,25,0.78); color: #fff;
+        border-radius: 999px; font-size: 11px; line-height: 1;
+        text-decoration: none; opacity: 0.7; transition: opacity .15s;
+        width: fit-content;
+      }
+      .ep-wm:hover { opacity: 1; }
+      .ep-wm img { display: block; }
+      .ep-wm-row { display: flex; justify-content: center; }
     </style>
   </head>
   <body>
@@ -106,6 +118,17 @@ const dataTheme = themeMode === 'auto' ? null : themeMode;
       <div class="content">
         <Fragment set:html={post.contentHtml} />
       </div>
+      {showWatermark && (
+        <div class="ep-wm-row">
+          <a class="ep-wm" href="https://rubrion.ai/?utm_source=edgepress-widget"
+             target="_blank" rel="noopener nofollow"
+             aria-label="Powered by Rubrion">
+            <img src="https://media.rubrion.ai/images/logo_rubrion_ver4_white.svg"
+                 alt="Rubrion" width="14" height="14" loading="lazy" />
+            <span>Powered by Rubrion</span>
+          </a>
+        </div>
+      )}
     </div>
     <script>
       const report = () => {
