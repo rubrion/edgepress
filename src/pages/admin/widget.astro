@@ -299,6 +299,9 @@ const turnstileEnabled =
         '<script>(function(){\n' +
         '  var f=document.getElementById("ep-subscribe"); if(!f) return;\n' +
         '  var st=document.getElementById("ep-status");\n' +
+        (turnstileEnabled
+          ? '  function rt(){ if(window.turnstile){ try{ window.turnstile.reset(); }catch(_){} } }\n'
+          : '') +
         '  f.addEventListener("submit",function(e){\n' +
         '    e.preventDefault();\n' +
         '    var fd=new FormData(f);\n' +
@@ -314,7 +317,8 @@ const turnstileEnabled =
         '       if(!o.ok){st.textContent=(o.j&&o.j.error)||"Error.";return;}\n' +
         '       if(o.j.alreadyActive){st.textContent="You\'re already subscribed.";}\n' +
         '       else{st.textContent="Check your inbox to confirm.";f.reset();}\n' +
-        '     }).catch(function(){st.textContent="Network error.";});\n' +
+        '     }).catch(function(){st.textContent="Network error.";})' +
+        (turnstileEnabled ? '.finally(rt)' : '') + ';\n' +
         '  });\n' +
         '})();<\/script>';
       $('form-snippet').textContent = snippet;
