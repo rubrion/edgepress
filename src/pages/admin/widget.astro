@@ -1,0 +1,256 @@
+---
+import { env } from 'cloudflare:workers';
+import { loadSettings } from '../../lib/settings';
+import AdminAppbar from '../../components/AdminAppbar.astro';
+
+const settings = await loadSettings();
+const themeColor = settings.themePrimaryColor;
+const saved = Astro.url.searchParams.get('saved') === '1';
+const error = Astro.url.searchParams.get('error');
+
+const clientDomain = (env as unknown as { CLIENT_DOMAIN?: string }).CLIENT_DOMAIN ?? '';
+// Origin used for snippet URLs. Falls back to the request origin when CLIENT_DOMAIN is unset.
+const publicOrigin = clientDomain ? `https://${clientDomain}` : Astro.url.origin;
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Widget — {settings.clientName}</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style is:global>
+    body { font-family: -apple-system, Segoe UI, sans-serif; background: #f5f5f7; margin: 0; min-height: 100vh; color: #1a1a1a; }
+    .wrap { max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+    .card { background: #fff; padding: 2rem; border-radius: 12px; border-top: 4px solid var(--theme); box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
+    h1 { margin: 0 0 0.25rem; font-size: 1.4rem; }
+    h2 { margin: 2rem 0 0.75rem; font-size: 1rem; color: #444; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
+    h2:first-of-type { margin-top: 1.5rem; }
+    .sub { margin: 0 0 1.5rem; color: #777; font-size: 0.9rem; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .field { margin-bottom: 1rem; }
+    label { display: block; font-size: 0.85rem; color: #555; margin-bottom: 0.4rem; font-weight: 500; }
+    .hint { font-size: 0.75rem; color: #888; margin-top: 0.25rem; }
+    input[type="text"], input[type="number"], select {
+      width: 100%; padding: 0.5rem 0.7rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.92rem;
+      box-sizing: border-box; font-family: inherit; background: #fff;
+    }
+    input[type="color"] { width: 48px; height: 36px; padding: 0; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; vertical-align: middle; }
+    .color-row { display: flex; align-items: center; gap: 0.6rem; }
+    .checks { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+    .checks label { display: flex; align-items: center; gap: 0.4rem; font-weight: 400; color: #333; margin: 0; }
+    .actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
+    button[type="submit"], button.copy {
+      padding: 0.55rem 1.1rem; background: var(--theme); color: #fff; border: none; border-radius: 6px;
+      font-size: 0.92rem; cursor: pointer; font-weight: 500;
+    }
+    button.copy.secondary { background: #444; }
+    .alert { padding: 0.6rem 0.8rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; }
+    .alert.ok { background: #e7f5ec; color: #2c7a3e; }
+    .alert.err { background: #fdecec; color: #b3261e; }
+    pre.snippet {
+      background: #0f1119; color: #e6edf3; padding: 1rem; border-radius: 8px; overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem; line-height: 1.55; margin: 0;
+      white-space: pre-wrap; word-break: break-all;
+    }
+    .snippet-wrap { position: relative; }
+    .snippet-wrap .copy { position: absolute; top: 0.6rem; right: 0.6rem; padding: 0.35rem 0.7rem; font-size: 0.78rem; }
+    .preview-frame {
+      width: 100%; min-height: 320px; border: 1px solid #ddd; border-radius: 8px; background: #fff;
+    }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    @media (max-width: 720px) { .grid, .row-2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body style={`--theme: ${themeColor}`}>
+  <AdminAppbar current="widget" />
+  <div class="wrap">
+    <div class="card">
+      <h1>Embeddable widget</h1>
+      <p class="sub">Configure default appearance for your blog widget. Anyone can embed it on any site using the snippet below. Per-embed overrides are passed via query string.</p>
+
+      {saved && <div class="alert ok">Saved.</div>}
+      {error && <div class="alert err">{error}</div>}
+
+      <form method="POST" action="/api/admin/settings" id="widget-form">
+        <input type="hidden" name="_redirect" value="/admin/widget" />
+        <h2>Defaults</h2>
+        <div class="grid">
+          <div class="field">
+            <label for="widgetDefaultTheme">Theme</label>
+            <select id="widgetDefaultTheme" name="widgetDefaultTheme">
+              <option value="auto" selected={settings.widgetDefaultTheme === 'auto'}>Auto (follow viewer)</option>
+              <option value="light" selected={settings.widgetDefaultTheme === 'light'}>Light</option>
+              <option value="dark" selected={settings.widgetDefaultTheme === 'dark'}>Dark</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="widgetDefaultLimit">Posts shown</label>
+            <input type="number" min="1" max="50" id="widgetDefaultLimit" name="widgetDefaultLimit" value={settings.widgetDefaultLimit} />
+          </div>
+
+          <div class="field">
+            <label for="widgetMaxWidth">Max width (CSS length)</label>
+            <input type="text" id="widgetMaxWidth" name="widgetMaxWidth" value={settings.widgetMaxWidth} placeholder="e.g. 720px or 100%" />
+            <div class="hint">Leave blank to fill the iframe.</div>
+          </div>
+
+          <div class="field">
+            <label for="widgetAccentOverride">Accent color override</label>
+            <div class="color-row">
+              <input type="color" id="widgetAccentColor" value={settings.widgetAccentOverride || settings.themePrimaryColor} />
+              <input type="text" id="widgetAccentOverride" name="widgetAccentOverride" value={settings.widgetAccentOverride} placeholder={settings.themePrimaryColor} pattern="^(#[0-9a-fA-F]{3,8})?$" />
+            </div>
+            <div class="hint">Empty = inherit site primary color.</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Display options</label>
+          <div class="checks">
+            <label>
+              <input type="hidden" name="widgetShowDate" value="0" />
+              <input type="checkbox" id="widgetShowDate" name="widgetShowDate" value="1" checked={settings.widgetShowDate === '1'} />
+              Show post date
+            </label>
+            <label>
+              <input type="hidden" name="widgetShowExcerpts" value="0" />
+              <input type="checkbox" id="widgetShowExcerpts" name="widgetShowExcerpts" value="1" checked={settings.widgetShowExcerpts === '1'} />
+              Show excerpts
+            </label>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit">Save defaults</button>
+        </div>
+      </form>
+
+      <h2>Embed snippet</h2>
+      <p class="sub">Paste this where you want the widget to appear. The resizer script is optional but lets the iframe auto-grow with content.</p>
+
+      <div class="grid">
+        <div>
+          <div class="field">
+            <label for="opt-target">Click behavior</label>
+            <select id="opt-target">
+              <option value="_blank" selected>Open posts in new tab (full site)</option>
+              <option value="_self">Open posts inside the widget</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="opt-font">Font</label>
+            <select id="opt-font">
+              <option value="">System font</option>
+              <option value="inherit">Inherit from host page</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Iframe size</label>
+            <div class="row-2">
+              <input type="text" id="opt-width" value="100%" placeholder="width" />
+              <input type="text" id="opt-height" value="auto" placeholder="height (or 'auto' for resizer)" />
+            </div>
+            <div class="hint">Use <code>auto</code> + the resizer script to track content height.</div>
+          </div>
+        </div>
+        <div>
+          <div class="field">
+            <label>Live preview</label>
+            <iframe id="preview" class="preview-frame" loading="lazy"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="snippet-wrap">
+        <pre class="snippet" id="snippet"></pre>
+        <button type="button" class="copy" id="copy-btn">Copy</button>
+      </div>
+
+      <p class="hint" style="margin-top: 0.75rem;">Origin: <code id="origin-display">{publicOrigin}</code></p>
+    </div>
+  </div>
+
+  <script is:inline define:vars={{ publicOrigin }}>
+    const $ = (id) => document.getElementById(id);
+
+    // Two-way bind accent picker.
+    const accentPicker = $('widgetAccentColor');
+    const accentText = $('widgetAccentOverride');
+    accentPicker?.addEventListener('input', () => { accentText.value = accentPicker.value; render(); });
+    accentText?.addEventListener('input', () => {
+      if (/^#[0-9a-fA-F]{6}$/.test(accentText.value)) accentPicker.value = accentText.value;
+      render();
+    });
+
+    // Re-render snippet + preview on every input.
+    document.querySelectorAll('input, select').forEach((el) => {
+      el.addEventListener('input', render);
+      el.addEventListener('change', render);
+    });
+
+    function buildEmbedUrl() {
+      const params = new URLSearchParams();
+      const theme = $('widgetDefaultTheme').value;
+      if (theme && theme !== 'auto') params.set('theme', theme);
+      const limit = $('widgetDefaultLimit').value;
+      if (limit) params.set('limit', limit);
+      const maxW = $('widgetMaxWidth').value;
+      if (maxW) params.set('maxWidth', maxW);
+      const accent = $('widgetAccentOverride').value;
+      if (accent) params.set('accent', accent);
+      params.set('date', $('widgetShowDate').checked ? '1' : '0');
+      params.set('excerpt', $('widgetShowExcerpts').checked ? '1' : '0');
+      const target = $('opt-target').value;
+      if (target === '_self') params.set('target', '_self');
+      const font = $('opt-font').value;
+      if (font) params.set('font', font);
+      const qs = params.toString();
+      return publicOrigin + '/embed/blog' + (qs ? '?' + qs : '');
+    }
+
+    function render() {
+      const url = buildEmbedUrl();
+      const w = ($('opt-width').value || '100%').trim();
+      const h = ($('opt-height').value || 'auto').trim();
+      const heightAttr = h.toLowerCase() === 'auto' ? '0' : h;
+      const styleH = h.toLowerCase() === 'auto' ? '' : 'height:' + h + ';';
+      const snippet =
+        '<iframe src="' + url + '"\n        ' +
+        'style="width:' + w + ';' + styleH + 'border:0;display:block"\n        ' +
+        'width="' + w + '" height="' + heightAttr + '" loading="lazy" referrerpolicy="no-referrer-when-downgrade"\n        ' +
+        'title="Blog by ' + (document.title.replace(/—.*$/, '').trim() || 'EdgePress') + '"></iframe>\n' +
+        '<script src="' + publicOrigin + '/embed/resizer.js" async><\/script>';
+      $('snippet').textContent = snippet;
+      const preview = $('preview');
+      if (preview.src !== url) preview.src = url;
+    }
+
+    $('copy-btn').addEventListener('click', async () => {
+      const text = $('snippet').textContent || '';
+      try {
+        await navigator.clipboard.writeText(text);
+        $('copy-btn').textContent = 'Copied';
+        setTimeout(() => { $('copy-btn').textContent = 'Copy'; }, 1500);
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents($('snippet'));
+        const sel = window.getSelection();
+        sel?.removeAllRanges(); sel?.addRange(range);
+      }
+    });
+
+    // Auto-resize preview iframe via the same postMessage protocol.
+    window.addEventListener('message', (ev) => {
+      const d = ev?.data;
+      if (!d || d.type !== 'edgepress:resize') return;
+      const f = $('preview');
+      if (f && ev.source === f.contentWindow) {
+        f.style.height = Math.max(120, Number(d.height) || 0) + 'px';
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>

@@ -70,7 +70,13 @@ const fontConfig = clientFont
 export default defineConfig({
   site: `https://${clientDomain}`,
   output: 'server',
-  integrations: [mdx(), react(), sitemap()],
+  integrations: [
+    mdx(),
+    react(),
+    sitemap({
+      filter: (page) => !page.includes('/embed/'),
+    }),
+  ],
 
   fonts: [fontConfig],
 

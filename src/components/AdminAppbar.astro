@@ -2,7 +2,7 @@
 import { loadSettings } from '../lib/settings';
 
 interface Props {
-  current?: 'posts' | 'subscribers' | 'settings';
+  current?: 'posts' | 'subscribers' | 'widget' | 'settings';
 }
 
 const { current } = Astro.props;
@@ -14,6 +14,7 @@ const clientName = settings.clientName;
 const links: { key: NonNullable<Props['current']>; href: string; label: string }[] = [
   { key: 'posts', href: '/admin', label: 'Posts' },
   { key: 'subscribers', href: '/admin/subscribers', label: 'Subscribers' },
+  { key: 'widget', href: '/admin/widget', label: 'Widget' },
   { key: 'settings', href: '/admin/settings', label: 'Settings' },
 ];
 ---

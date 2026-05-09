@@ -1,0 +1,120 @@
+---
+import { and, eq } from 'drizzle-orm';
+import { getDbInstance, posts } from '../../../db';
+import { loadSettings, hexToRgbTuple } from '../../../lib/settings';
+
+Astro.response.headers.set('Content-Security-Policy', 'frame-ancestors *');
+Astro.response.headers.set('X-Frame-Options', 'ALLOWALL');
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=60');
+
+const { slug } = Astro.params;
+if (!slug) return new Response('not found', { status: 404 });
+
+const db = getDbInstance();
+const [post] = await db
+  .select()
+  .from(posts)
+  .where(and(eq(posts.slug, slug), eq(posts.isPublished, true)))
+  .limit(1);
+
+if (!post) return new Response('not found', { status: 404 });
+
+const settings = await loadSettings();
+const q = Astro.url.searchParams;
+const themeMode = (() => {
+  const v = q.get('theme') || settings.widgetDefaultTheme;
+  return v === 'light' || v === 'dark' || v === 'auto' ? v : 'auto';
+})();
+const maxWidth = q.get('maxWidth') || settings.widgetMaxWidth || '720px';
+const accent = q.get('accent') || settings.widgetAccentOverride || settings.themePrimaryColor;
+const fontInherit = q.get('font') === 'inherit';
+const showBackLink = q.get('back') !== '0';
+const backHref = `${Astro.url.origin}/embed/blog${Astro.url.search}`;
+
+const fontStack = fontInherit ? 'inherit' : 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+
+const rootStyle = [
+  `--bg: ${hexToRgbTuple(settings.colorBgLight)}`,
+  `--border: ${hexToRgbTuple(settings.colorBorderLight)}`,
+  `--heading: ${hexToRgbTuple(settings.colorHeadingLight)}`,
+  `--text: ${hexToRgbTuple(settings.colorTextLight)}`,
+  `--muted: ${hexToRgbTuple(settings.colorMutedLight)}`,
+  `--bgDark: ${hexToRgbTuple(settings.colorBgDark)}`,
+  `--borderDark: ${hexToRgbTuple(settings.colorBorderDark)}`,
+  `--headingDark: ${hexToRgbTuple(settings.colorHeadingDark)}`,
+  `--textDark: ${hexToRgbTuple(settings.colorTextDark)}`,
+  `--mutedDark: ${hexToRgbTuple(settings.colorMutedDark)}`,
+  `--accent: ${accent}`,
+  `--maxWidth: ${maxWidth}`,
+  `--fontStack: ${fontStack}`,
+].join('; ');
+
+const dataTheme = themeMode === 'auto' ? null : themeMode;
+---
+
+<!doctype html>
+<html lang="en" data-theme={dataTheme} style={rootStyle}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>{post.title} — {settings.clientName}</title>
+    <style is:global>
+      html, body {
+        margin: 0; padding: 0;
+        background: rgb(var(--bg));
+        color: rgb(var(--text));
+        font-family: var(--fontStack);
+        font-size: 16px;
+        line-height: 1.65;
+        color-scheme: light;
+      }
+      html[data-theme="dark"] body, html[data-theme="dark"] {
+        background: rgb(var(--bgDark));
+        color: rgb(var(--textDark));
+        color-scheme: dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-theme="light"]) { color-scheme: dark; }
+        html:not([data-theme="light"]) body { background: rgb(var(--bgDark)); color: rgb(var(--textDark)); }
+      }
+      .wrap { max-width: var(--maxWidth); margin: 0 auto; padding: 1.25rem 1.1rem; box-sizing: border-box; }
+      h1 { color: rgb(var(--heading)); margin: 0 0 0.4rem; line-height: 1.25; font-size: 1.55rem; }
+      html[data-theme="dark"] h1 { color: rgb(var(--headingDark)); }
+      .meta { color: rgb(var(--muted)); font-size: 0.85rem; margin-bottom: 1rem; }
+      html[data-theme="dark"] .meta { color: rgb(var(--mutedDark)); }
+      .back { display: inline-block; margin-bottom: 1rem; color: var(--accent); text-decoration: none; font-size: 0.85rem; }
+      .back:hover { text-decoration: underline; }
+      .content :is(h2, h3, h4) { color: rgb(var(--heading)); }
+      html[data-theme="dark"] .content :is(h2, h3, h4) { color: rgb(var(--headingDark)); }
+      .content a { color: var(--accent); }
+      .content img, .content video { max-width: 100%; height: auto; border-radius: 6px; }
+      .content pre { overflow-x: auto; padding: 0.75rem; border-radius: 6px; background: rgba(0,0,0,0.04); }
+      html[data-theme="dark"] .content pre { background: rgba(255,255,255,0.05); }
+      .content code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
+      .content blockquote { border-left: 3px solid rgb(var(--border)); margin: 1em 0; padding: 0 0 0 1em; color: rgb(var(--muted)); }
+      html[data-theme="dark"] .content blockquote { border-left-color: rgb(var(--borderDark)); color: rgb(var(--mutedDark)); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      {showBackLink && <a class="back" href={backHref}>← Back</a>}
+      <h1>{post.title}</h1>
+      {post.publishedAt && (
+        <div class="meta">{new Date(post.publishedAt).toLocaleDateString()}</div>
+      )}
+      <div class="content">
+        <Fragment set:html={post.contentHtml} />
+      </div>
+    </div>
+    <script>
+      const report = () => {
+        const h = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+        try { parent.postMessage({ type: 'edgepress:resize', height: h }, '*'); } catch {}
+      };
+      window.addEventListener('load', report);
+      const ro = new ResizeObserver(report);
+      ro.observe(document.body);
+    </script>
+  </body>
+</html>

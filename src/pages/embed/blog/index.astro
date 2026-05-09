@@ -1,0 +1,173 @@
+---
+import { desc, eq } from 'drizzle-orm';
+import { getDbInstance, posts } from '../../../db';
+import { loadSettings, hexToRgbTuple } from '../../../lib/settings';
+import { getLang, useTranslations } from '../../../i18n';
+
+// Allow being framed by any origin. CSP `frame-ancestors *` overrides legacy XFO.
+Astro.response.headers.set('Content-Security-Policy', 'frame-ancestors *');
+Astro.response.headers.set('X-Frame-Options', 'ALLOWALL');
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=60');
+
+const settings = await loadSettings();
+const t = useTranslations(getLang(Astro.request));
+
+const q = Astro.url.searchParams;
+const themeMode = (() => {
+  const v = q.get('theme') || settings.widgetDefaultTheme;
+  return v === 'light' || v === 'dark' || v === 'auto' ? v : 'auto';
+})();
+const limit = (() => {
+  const raw = parseInt(q.get('limit') || settings.widgetDefaultLimit, 10);
+  if (!Number.isFinite(raw) || raw < 1) return 5;
+  return Math.min(raw, 50);
+})();
+const showDate = (q.get('date') ?? settings.widgetShowDate) !== '0';
+const showExcerpts = (q.get('excerpt') ?? settings.widgetShowExcerpts) === '1';
+const maxWidth = q.get('maxWidth') || settings.widgetMaxWidth || 'none';
+const accent = q.get('accent') || settings.widgetAccentOverride || settings.themePrimaryColor;
+const fontInherit = q.get('font') === 'inherit';
+const target = q.get('target') === '_self' ? '_self' : '_blank';
+const linkBase =
+  q.get('linkBase') ||
+  (target === '_self' ? `${Astro.url.origin}/embed/blog` : `${Astro.url.origin}/blog`);
+
+const db = getDbInstance();
+const rows = await db
+  .select({
+    slug: posts.slug,
+    title: posts.title,
+    publishedAt: posts.publishedAt,
+    contentMd: posts.contentMd,
+  })
+  .from(posts)
+  .where(eq(posts.isPublished, true))
+  .orderBy(desc(posts.publishedAt))
+  .limit(limit);
+
+const list = rows.map((r) => ({
+  slug: r.slug,
+  title: r.title,
+  publishedAt: r.publishedAt,
+  excerpt: showExcerpts
+    ? r.contentMd
+        .replace(/^#+\s+.*$/gm, '')
+        .replace(/[#*_`>\[\]()!]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 200)
+    : '',
+}));
+
+const fontStack = fontInherit ? 'inherit' : 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+
+// Inline CSS variables on <html> so they're deterministic regardless of bundler scoping.
+const rootStyle = [
+  `--bg: ${hexToRgbTuple(settings.colorBgLight)}`,
+  `--border: ${hexToRgbTuple(settings.colorBorderLight)}`,
+  `--heading: ${hexToRgbTuple(settings.colorHeadingLight)}`,
+  `--text: ${hexToRgbTuple(settings.colorTextLight)}`,
+  `--muted: ${hexToRgbTuple(settings.colorMutedLight)}`,
+  `--bgDark: ${hexToRgbTuple(settings.colorBgDark)}`,
+  `--borderDark: ${hexToRgbTuple(settings.colorBorderDark)}`,
+  `--headingDark: ${hexToRgbTuple(settings.colorHeadingDark)}`,
+  `--textDark: ${hexToRgbTuple(settings.colorTextDark)}`,
+  `--mutedDark: ${hexToRgbTuple(settings.colorMutedDark)}`,
+  `--accent: ${accent}`,
+  `--maxWidth: ${maxWidth}`,
+  `--fontStack: ${fontStack}`,
+].join('; ');
+
+const dataTheme = themeMode === 'auto' ? null : themeMode;
+---
+
+<!doctype html>
+<html lang="en" data-theme={dataTheme} style={rootStyle}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>{settings.clientName} — {t('blog.title')}</title>
+    <style is:global>
+      html, body {
+        margin: 0; padding: 0;
+        background: rgb(var(--bg));
+        color: rgb(var(--text));
+        font-family: var(--fontStack);
+        font-size: 15px;
+        line-height: 1.55;
+        color-scheme: light;
+      }
+      html[data-theme="dark"] body, html[data-theme="dark"] {
+        background: rgb(var(--bgDark));
+        color: rgb(var(--textDark));
+        color-scheme: dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-theme="light"]) { color-scheme: dark; }
+        html:not([data-theme="light"]) body { background: rgb(var(--bgDark)); color: rgb(var(--textDark)); }
+        html:not([data-theme="light"]) .post-list li { border-color: rgb(var(--borderDark)); }
+        html:not([data-theme="light"]) .title { color: rgb(var(--headingDark)); }
+        html:not([data-theme="light"]) .date { color: rgb(var(--mutedDark)); }
+        html:not([data-theme="light"]) .excerpt { color: rgb(var(--mutedDark)); }
+        html:not([data-theme="light"]) .empty { color: rgb(var(--mutedDark)); }
+      }
+      .wrap {
+        max-width: var(--maxWidth);
+        margin: 0 auto;
+        padding: 1rem 1.1rem;
+        box-sizing: border-box;
+      }
+      .post-list { list-style: none; margin: 0; padding: 0; }
+      .post-list li {
+        border-bottom: 1px solid rgb(var(--border));
+        padding: 0.85rem 0;
+      }
+      html[data-theme="dark"] .post-list li { border-color: rgb(var(--borderDark)); }
+      .post-list li:last-child { border-bottom: none; }
+      a.post { display: block; text-decoration: none; color: inherit; }
+      .row { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+      .title { font-weight: 600; color: rgb(var(--heading)); }
+      html[data-theme="dark"] .title { color: rgb(var(--headingDark)); }
+      a.post:hover .title { color: var(--accent); }
+      .date { color: rgb(var(--muted)); font-size: 0.85em; flex-shrink: 0; }
+      html[data-theme="dark"] .date { color: rgb(var(--mutedDark)); }
+      .excerpt { color: rgb(var(--muted)); font-size: 0.9em; margin-top: 0.25rem; }
+      html[data-theme="dark"] .excerpt { color: rgb(var(--mutedDark)); }
+      .empty { color: rgb(var(--muted)); padding: 1rem 0; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      {list.length === 0 ? (
+        <p class="empty">{t('blog.empty')}</p>
+      ) : (
+        <ul class="post-list">
+          {list.map((p) => (
+            <li>
+              <a class="post" href={`${linkBase}/${p.slug}`} target={target} rel="noopener">
+                <div class="row">
+                  <span class="title">{p.title}</span>
+                  {showDate && p.publishedAt && (
+                    <span class="date">{new Date(p.publishedAt).toLocaleDateString()}</span>
+                  )}
+                </div>
+                {showExcerpts && p.excerpt && <div class="excerpt">{p.excerpt}…</div>}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+
+    <script>
+      const report = () => {
+        const h = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+        try { parent.postMessage({ type: 'edgepress:resize', height: h }, '*'); } catch {}
+      };
+      window.addEventListener('load', report);
+      const ro = new ResizeObserver(report);
+      ro.observe(document.body);
+    </script>
+  </body>
+</html>
