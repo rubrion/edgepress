@@ -11,6 +11,12 @@ const error = Astro.url.searchParams.get('error');
 const clientDomain = (env as unknown as { CLIENT_DOMAIN?: string }).CLIENT_DOMAIN ?? '';
 // Origin used for snippet URLs. Falls back to the request origin when CLIENT_DOMAIN is unset.
 const publicOrigin = clientDomain ? `https://${clientDomain}` : Astro.url.origin;
+
+// Turnstile site key is a public token; safe to send to the client.
+const turnstileSiteKey =
+  (env as unknown as { TURNSTILE_SITE_KEY?: string }).TURNSTILE_SITE_KEY ?? '';
+const turnstileEnabled =
+  Boolean((env as unknown as { TURNSTILE_SECRET?: string }).TURNSTILE_SECRET);
 ---
 <!doctype html>
 <html lang="en">
@@ -121,6 +127,33 @@ const publicOrigin = clientDomain ? `https://${clientDomain}` : Astro.url.origin
           </div>
         </div>
 
+        <h2>Cross-origin embeds (CORS)</h2>
+        <div class="field">
+          <label for="widgetAllowedOrigins">Allowed origins</label>
+          <input type="text" id="widgetAllowedOrigins" name="widgetAllowedOrigins" value={settings.widgetAllowedOrigins} placeholder="* or https://site.com,https://other.com" />
+          <div class="hint">
+            Comma-separated full origins (scheme + host + optional port) that may call <code>/api/subscribe</code> and <code>/api/unsubscribe</code> from JavaScript.
+            <code>*</code> allows any origin (no credentials). Empty disables cross-origin reads (the iframe widget itself still works because it loads from this domain).
+            CORS only gates <em>browser reads</em>, not writes — combine with bot protection below.
+          </div>
+        </div>
+
+        <h2>Bot protection</h2>
+        <div class="field">
+          <label>Cloudflare Turnstile</label>
+          {turnstileEnabled ? (
+            <div class="alert ok" style="margin-bottom: 0.5rem;">
+              Enabled. Server has <code>TURNSTILE_SECRET</code> configured; subscribe endpoint will reject unverified tokens.
+            </div>
+          ) : (
+            <div class="alert err" style="margin-bottom: 0.5rem;">
+              Not configured. Add <code>TURNSTILE_SITE_KEY</code> to <code>vars</code> in <code>wrangler.jsonc</code> and run
+              <code>bunx wrangler secret put TURNSTILE_SECRET</code>. Until both are set, the subscribe endpoint accepts any submission.
+            </div>
+          )}
+          <div class="hint">Get keys at <code>dash.cloudflare.com → Turnstile</code>. Site key is public; secret is server-only.</div>
+        </div>
+
         <div class="actions">
           <button type="submit">Save defaults</button>
         </div>
@@ -167,11 +200,21 @@ const publicOrigin = clientDomain ? `https://${clientDomain}` : Astro.url.origin
         <button type="button" class="copy" id="copy-btn">Copy</button>
       </div>
 
+      <h2>Subscribe-form snippet (cross-origin)</h2>
+      <p class="sub">
+        Drop this on any host site whose origin is in the allowlist above. Posts submit to <code>{publicOrigin}/api/subscribe</code> and trigger a confirmation email (double opt-in).
+        {turnstileEnabled && <span> Turnstile widget is included automatically.</span>}
+      </p>
+      <div class="snippet-wrap">
+        <pre class="snippet" id="form-snippet"></pre>
+        <button type="button" class="copy" id="copy-form-btn">Copy</button>
+      </div>
+
       <p class="hint" style="margin-top: 0.75rem;">Origin: <code id="origin-display">{publicOrigin}</code></p>
     </div>
   </div>
 
-  <script is:inline define:vars={{ publicOrigin }}>
+  <script is:inline define:vars={{ publicOrigin, turnstileEnabled, turnstileSiteKey }}>
     const $ = (id) => document.getElementById(id);
 
     // Two-way bind accent picker.
@@ -224,21 +267,68 @@ const publicOrigin = clientDomain ? `https://${clientDomain}` : Astro.url.origin
       $('snippet').textContent = snippet;
       const preview = $('preview');
       if (preview.src !== url) preview.src = url;
+      renderForm();
     }
 
-    $('copy-btn').addEventListener('click', async () => {
-      const text = $('snippet').textContent || '';
-      try {
-        await navigator.clipboard.writeText(text);
-        $('copy-btn').textContent = 'Copied';
-        setTimeout(() => { $('copy-btn').textContent = 'Copy'; }, 1500);
-      } catch {
+    function renderForm() {
+      const tsBlock = turnstileEnabled
+        ? '\n  <div class="cf-turnstile" data-sitekey="' + (turnstileSiteKey || 'YOUR_TURNSTILE_SITE_KEY') + '"></div>'
+        : '';
+      const tsScript = turnstileEnabled
+        ? '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer><\/script>\n'
+        : '';
+      const snippet =
+        tsScript +
+        '<form id="ep-subscribe" style="display:flex;flex-direction:column;gap:0.5rem;max-width:360px;font-family:inherit;">\n' +
+        '  <label for="ep-email" style="font-size:0.85rem;">Email</label>\n' +
+        '  <input id="ep-email" name="email" type="email" required placeholder="you@example.com"\n' +
+        '         style="padding:0.55rem 0.7rem;border:1px solid #ccc;border-radius:6px;" />\n' +
+        '  <input type="text" name="website" tabindex="-1" autocomplete="off"\n' +
+        '         style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" aria-hidden="true" />' +
+        tsBlock + '\n' +
+        '  <button type="submit"\n' +
+        '          style="padding:0.6rem 1rem;background:#111;color:#fff;border:0;border-radius:6px;cursor:pointer;">Subscribe</button>\n' +
+        '  <p id="ep-status" role="status" aria-live="polite" style="font-size:0.85rem;margin:0;min-height:1.2em;"></p>\n' +
+        '</form>\n' +
+        '<script>(function(){\n' +
+        '  var f=document.getElementById("ep-subscribe"); if(!f) return;\n' +
+        '  var st=document.getElementById("ep-status");\n' +
+        '  f.addEventListener("submit",function(e){\n' +
+        '    e.preventDefault();\n' +
+        '    var fd=new FormData(f);\n' +
+        '    var body={email:fd.get("email"),website:fd.get("website")||""};\n' +
+        (turnstileEnabled
+          ? '    var t=fd.get("cf-turnstile-response"); if(t) body.turnstile=t;\n'
+          : '') +
+        '    st.textContent="Submitting...";\n' +
+        '    fetch("' + publicOrigin + '/api/subscribe",{\n' +
+        '      method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),\n' +
+        '    }).then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})\n' +
+        '     .then(function(o){\n' +
+        '       if(!o.ok){st.textContent=(o.j&&o.j.error)||"Error.";return;}\n' +
+        '       if(o.j.alreadyActive){st.textContent="You\'re already subscribed.";}\n' +
+        '       else{st.textContent="Check your inbox to confirm.";f.reset();}\n' +
+        '     }).catch(function(){st.textContent="Network error.";});\n' +
+        '  });\n' +
+        '})();<\/script>';
+      $('form-snippet').textContent = snippet;
+    }
+
+    function copyFromEl(textEl, btn) {
+      const text = textEl.textContent || '';
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+      }).catch(() => {
         const range = document.createRange();
-        range.selectNodeContents($('snippet'));
+        range.selectNodeContents(textEl);
         const sel = window.getSelection();
         sel?.removeAllRanges(); sel?.addRange(range);
-      }
-    });
+      });
+    }
+
+    $('copy-btn').addEventListener('click', () => copyFromEl($('snippet'), $('copy-btn')));
+    $('copy-form-btn').addEventListener('click', () => copyFromEl($('form-snippet'), $('copy-form-btn')));
 
     // Auto-resize preview iframe via the same postMessage protocol.
     window.addEventListener('message', (ev) => {

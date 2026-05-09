@@ -20,6 +20,7 @@ const heading = Astro.props.heading ?? t('subscribe.heading');
 		data-subscribe
 		data-msg-loading={t('subscribe.loading')}
 		data-msg-success={t('subscribe.success')}
+		data-msg-already={t('subscribe.alreadyActive')}
 		data-msg-network={t('subscribe.errorNetwork')}
 	>
 		<label class="sr-only" for="subscribe-email">{t('subscribe.emailLabel')}</label>
@@ -41,7 +42,8 @@ const heading = Astro.props.heading ?? t('subscribe.heading');
 	const status = document.querySelector<HTMLElement>('[data-subscribe-status]');
 	if (form && status) {
 		const msgLoading = form.dataset.msgLoading ?? 'Subscribing…';
-		const msgSuccess = form.dataset.msgSuccess ?? 'Thanks!';
+		const msgSuccess = form.dataset.msgSuccess ?? 'Check your inbox to confirm.';
+		const msgAlready = form.dataset.msgAlready ?? "You're already subscribed.";
 		const msgNetwork = form.dataset.msgNetwork ?? 'Network error.';
 
 		form.addEventListener('submit', async (e) => {
@@ -54,11 +56,11 @@ const heading = Astro.props.heading ?? t('subscribe.heading');
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ email }),
 				});
+				const j = (await res.json().catch(() => ({}))) as { error?: string; alreadyActive?: boolean };
 				if (res.ok) {
-					status.textContent = msgSuccess;
+					status.textContent = j.alreadyActive ? msgAlready : msgSuccess;
 					form.reset();
 				} else {
-					const j = (await res.json().catch(() => ({}))) as { error?: string };
 					status.textContent = j.error ?? `Failed (${res.status}).`;
 				}
 			} catch (err) {

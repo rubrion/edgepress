@@ -5,12 +5,15 @@ export const subscribers = sqliteTable('subscribers', {
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   email: text('email').notNull().unique(),
-  status: text('status', { enum: ['active', 'unsubscribed'] })
+  status: text('status', { enum: ['active', 'pending', 'unsubscribed'] })
     .notNull()
     .default('active'),
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .notNull()
     .$defaultFn(() => new Date()),
+  confirmedAt: integer('confirmed_at', { mode: 'timestamp_ms' }),
+  confirmToken: text('confirm_token'),
+  confirmTokenExpiresAt: integer('confirm_token_expires_at', { mode: 'timestamp_ms' }),
 });
 
 export const posts = sqliteTable('posts', {

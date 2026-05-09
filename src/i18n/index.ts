@@ -16,7 +16,8 @@ const translations = {
     'subscribe.placeholder': 'you@example.com',
     'subscribe.button': 'Subscribe',
     'subscribe.loading': 'Subscribing…',
-    'subscribe.success': 'Thanks! Check your inbox for the next issue.',
+    'subscribe.success': 'Check your inbox to confirm your subscription.',
+    'subscribe.alreadyActive': "You're already subscribed.",
     'subscribe.errorNetwork': 'Network error.',
 
     'index.latestPosts': 'Latest posts',
@@ -43,7 +44,8 @@ const translations = {
     'subscribe.placeholder': 'voce@exemplo.com',
     'subscribe.button': 'Assinar',
     'subscribe.loading': 'Inscrevendo…',
-    'subscribe.success': 'Obrigado! Verifique sua caixa de entrada.',
+    'subscribe.success': 'Verifique sua caixa de entrada para confirmar a inscrição.',
+    'subscribe.alreadyActive': 'Você já está inscrito.',
     'subscribe.errorNetwork': 'Erro de rede.',
 
     'index.latestPosts': 'Últimas publicações',

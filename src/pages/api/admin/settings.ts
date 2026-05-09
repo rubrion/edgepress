@@ -38,6 +38,25 @@ const validate = (patch: Partial<Settings>): { ok: true } | { ok: false; error: 
   if (patch.widgetAccentOverride && !HEX_COLOR.test(patch.widgetAccentOverride)) {
     return { ok: false, error: 'widgetAccentOverride must be a hex color like #1a2b3f' };
   }
+  if (patch.widgetAllowedOrigins) {
+    const trimmed = patch.widgetAllowedOrigins.trim();
+    if (trimmed !== '*') {
+      const parts = trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+      for (const p of parts) {
+        try {
+          const u = new URL(p);
+          if (!['http:', 'https:'].includes(u.protocol)) {
+            return { ok: false, error: `widgetAllowedOrigins entry "${p}" must be http(s)` };
+          }
+          if (u.pathname !== '/' && u.pathname !== '') {
+            return { ok: false, error: `widgetAllowedOrigins entry "${p}" must be an origin (no path)` };
+          }
+        } catch {
+          return { ok: false, error: `widgetAllowedOrigins entry "${p}" is not a valid origin` };
+        }
+      }
+    }
+  }
   return { ok: true };
 };
 
